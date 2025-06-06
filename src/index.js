@@ -12,6 +12,7 @@ const IS_DEV = process.argv.includes("--dev");
 const display = new Display({
 	layout: LAYOUT,
 	panelWidth: 28,
+	isMirrored: true,
 	transport: !IS_DEV ? {
 		type: 'serial',
 		path: '/dev/ttyACM0',
