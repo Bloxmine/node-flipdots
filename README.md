@@ -23,6 +23,49 @@ cd node-flipdots
 npm install
 ```
 
+## Input System
+
+This application supports **dual input modes** - both controller and keyboard input work simultaneously:
+
+### 🎮 Controller Support
+- **Xbox 360 Controller** (via USB or wireless adapter)
+- **D-pad or Left Analog Stick**: Move character/cursor
+- **A Button or Start**: Restart/action
+- Auto-detection on startup
+- Hot-plug support (connect/disconnect anytime)
+
+### ⌨️ Keyboard Support
+- **Arrow Keys or WASD**: Move character/cursor  
+- **R**: Restart/action
+- **Ctrl+C**: Exit application
+- Always available as fallback
+- Works simultaneously with controller
+
+### Testing Input
+Test your input setup before running the game:
+
+```bash
+npm run test-input
+```
+
+This will show you:
+- Which controllers are detected
+- Real-time input from both controller and keyboard
+- Connection status updates
+
+### Input Method Status
+The application displays current input status:
+- 🎮 Controller + ⌨️ Keyboard: Both active
+- ⌨️ Keyboard only: Controller not detected/connected
+
+### Troubleshooting Input
+- **Controller not detected**: Check `/dev/input/js*` device files exist
+- **Permission issues**: You may need to add your user to the `input` group:
+  ```bash
+  sudo usermod -a -G input $USER
+  ```
+- **Multiple controllers**: The system automatically detects js0, js1, js2
+
 ## Running the Application
 
 Start the development server with:
@@ -39,11 +82,35 @@ Once running:
 
 ## Project Structure
 
-- `src/index.js` - Main entry point that sets up the canvas, rendering loop, and example animations
+- `src/index.js` - Main entry point that sets up the canvas, rendering loop, and Pacxon game
+- `src/pacxon-flipdot.js` - Pacxon game implementation with flipdot-optimized rendering
+- `src/controller.js` - Xbox 360 controller input handling
 - `src/ticker.js` - Handles the timing mechanism (like requestAnimationFrame for Node.js)
 - `src/preview.js` - Creates a simple HTTP server for real-time preview in the browser
 - `src/settings.js` - Configuration for display resolution, panel layout, and framerate
 - `output/` - Directory containing generated PNG frames
+
+## Game Features
+
+### 🎮 Pacxon Game
+The flipdot display runs a Pacxon-style game with the following features:
+- **Real-time score display** in the top-right corner using custom 3-pixel wide font
+- **Fill percentage tracking** - goal is to fill 80% of the screen
+- **Lives system** with enemy collision detection
+- **Custom bitmap font** for all text rendering
+- **Optimized for flipdot display** - pure black and white graphics
+
+### 📊 Score Display
+- **Position**: Top-right corner of the display
+- **Font**: Custom 3-pixel wide bitmap numbers (0-9)
+- **Size**: 5 pixels tall, optimized for readability on small displays
+- **Real-time updates** as you play the game
+
+### 🎨 Font Visualization
+View the custom number font:
+```bash
+npm run font-demo
+```
 
 ## Settings and Configuration
 

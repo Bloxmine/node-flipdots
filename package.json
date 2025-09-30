@@ -5,7 +5,12 @@
 	"type": "module",
 	"scripts": {
 		"dev": "nodemon src/index.js --dev",
-		"start": "node src/index.js"
+		"start": "node src/index.js",
+		"prototype": "nodemon src/prototype.js --dev",
+		"prototype:prod": "node src/prototype.js",
+		"test-input": "node src/input-test.js",
+		"test-simple": "node src/simple-input-test.js",
+		"font-demo": "node src/font-demo.js"
 	},
 	"author": "Stef van Wijchen (OWOW)",
 	"license": "ISC",
@@ -14,7 +19,11 @@
 		"nodemon": "^3.1.10"
 	},
 	"dependencies": {
+		"@owowagency/flipdot-emu": "file:packages/owowagency-flipdot-emu-1.0.0.tgz",
 		"canvas": "^3.1.0",
-		"@owowagency/flipdot-emu": "file:packages/owowagency-flipdot-emu-1.0.0.tgz"
+		"express": "^5.1.0",
+		"joystick": "^0.1.2",
+		"keypress": "^0.2.1",
+		"node-hid": "^3.2.0"
 	}
 }
