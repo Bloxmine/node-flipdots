@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { FPS, LAYOUT } from "./settings.js";
 import { Display } from "@owowagency/flipdot-emu";
-import "./preview.js";
+import { sendFrame } from "./preview.js";
 
 // Pacxon game imports
 import { PacxonGame } from "./pacxon-flipdot.js";
@@ -201,24 +201,6 @@ process.stdin.on('data', (chunk) => {
 const ticker = new Ticker({ fps: FPS });
 
 ticker.start(({ deltaTime, elapsedTime }) => {
-	// Clear the console less aggressively to avoid input conflicts
-	if (Math.floor(elapsedTime / 1000) % 2 === 0) {
-		console.clear();
-	}
-	console.time("Write frame");
-	console.log(`Rendering a ${width}x${height} canvas`);
-	console.log("View at http://localhost:3000/view");
-	
-	// Dynamic control instructions based on input method
-	const inputStatus = [];
-	if (controllerConnected) {
-		inputStatus.push("🎮 Controller: D-pad/Stick+A/Start");
-	}
-	if (keyboardInputActive) {
-		inputStatus.push("⌨️  Keyboard: WASD/Arrows+R/Space");
-	}
-	console.log(`Controls: ${inputStatus.join(" | ")} | Ctrl+C to exit`);
-
 	// Update game logic
 	pacxonGame.update();
 
@@ -230,12 +212,6 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 
 	// Render the Pacxon game
 	pacxonGame.render(ctx);
-
-	// Display game status in terminal only
-	const status = pacxonGame.getStatus();
-	if (status) {
-		console.log(`Game Status: ${status}`);
-	}
 
 	// Convert image to binary (purely black and white) for flipdot display
 	{
@@ -253,22 +229,24 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 		ctx.putImageData(imageData, 0, 0);
 	}
 
+	// Get the image data
+	const imageData = ctx.getImageData(0, 0, display.width, display.height);
+	
 	if (IS_DEV) {
-		// Save the canvas as a PNG file
-		const filename = path.join(outputDir, "frame.png");
-		const buffer = canvas.toBuffer("image/png");
-		fs.writeFileSync(filename, buffer);
+		// Send frame directly to browser via WebSocket
+		sendFrame(imageData);
+		
+		// Optionally still save PNG for debugging (can be removed for even better performance)
+		// const filename = path.join(outputDir, "frame.png");
+		// const buffer = canvas.toBuffer("image/png");
+		// fs.writeFileSync(filename, buffer);
 	} else {
-		const imageData = ctx.getImageData(0, 0, display.width, display.height);
+		// Send to physical flipdot display
 		display.setImageData(imageData);
 		if (display.isDirty()) {
 			display.flush();
 		}
 	}
-
-	console.log(`Eslapsed time: ${(elapsedTime / 1000).toFixed(2)}s`);
-	console.log(`Delta time: ${deltaTime.toFixed(2)}ms`);
-	console.timeEnd("Write frame");
 });
 
 // Cleanup on process exit

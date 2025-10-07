@@ -63,14 +63,6 @@ process.on('SIGINT', () => {
 const ticker = new Ticker({ fps: FPS });
 
 ticker.start(({ deltaTime, elapsedTime }) => {
-	// Clear the console
-	console.clear();
-	console.time("Write frame");
-	console.log(`Rendering FlipDot Prototype: ${width}x${height} grid`);
-	console.log("🌐 View prototype at http://localhost:3001");
-	console.log("🎮 Use web controls to play the game");
-	console.log("⌨️  Or use keyboard: Arrow Keys/WASD to move, R to restart");
-
 	// Update game logic
 	pacxonGame.update();
 
@@ -82,12 +74,6 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 
 	// Render the Pacxon game
 	pacxonGame.render(ctx);
-
-	// Display game status in terminal only
-	const status = pacxonGame.getStatus();
-	if (status) {
-		console.log(`Game Status: ${status}`);
-	}
 
 	// Convert image to binary (purely black and white) for flipdot display
 	{
@@ -117,8 +103,4 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 		// Save prototype version
 		prototypeRenderer.savePrototype("prototype-frame.png");
 	}
-
-	console.log(`Elapsed time: ${(elapsedTime / 1000).toFixed(2)}s`);
-	console.log(`Delta time: ${deltaTime.toFixed(2)}ms`);
-	console.timeEnd("Write frame");
 });

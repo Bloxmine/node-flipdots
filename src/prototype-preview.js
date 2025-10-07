@@ -318,11 +318,11 @@ app.post("/command", (req, res) => {
 // Get game status
 app.get("/status", (req, res) => {
   if (!gameInstance) {
-    return res.text("Game not initialized");
+    return res.send("Game not initialized");
   }
   
   const status = gameInstance.getStatus();
-  res.text(status || "Game running...");
+  res.send(status || "Game running...");
 });
 
 // Function to update the prototype renderer from external source

@@ -7,24 +7,6 @@ const WIN_PCT = 80;
 
 // Character font for text rendering
 const characters = {
-  "W":[[1,0,0,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,0,1,0,1],[1,1,1,1,0]],
-  "E":[[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,1,1,1,1]],
-  "L":[[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
-  "C":[[0,1,1,1,1],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[0,1,1,1,1]],
-  "O":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
-  "M":[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1]],
-  "T":[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
-  "A":[[0,1,1,1,0],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1]],
-  "N":[[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1]],
-  "I":[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
-  "S":[[0,1,1,1,1],[1,0,0,0,0],[0,1,1,1,0],[0,0,0,0,1],[1,1,1,1,0]],
-  "G":[[0,1,1,1,1],[1,0,0,0,0],[1,0,0,1,1],[1,0,0,0,1],[0,1,1,1,1]],
-  "V":[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],
-  "R":[[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0]],
-  " ":[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]],
-  "!":[[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,0,0,0],[0,0,1,0,0]],
-  "P":[[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
-  "X":[[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1]],
   // Numbers 0-9 (3-pixel wide format)
   "0":[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
   "1":[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
@@ -39,6 +21,302 @@ const characters = {
   "P":[[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
   "X":[[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1]],
 };
+const lettersBig = {
+      "A": [
+        [0,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "B": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "C": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "D": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "E": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "F": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    "G": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "H": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "I": [
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,1,1],
+    ],
+    "J": [
+        [0,0,0,0,1],
+        [0,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "K": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "L": [
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "M": [
+        [0,1,1,1,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,0,0,1],
+    ],
+    "N": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "O": [
+        [0,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "P": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    "Q": [
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,0,1,0],
+        [1,1,1,0,1],
+    ],
+    "R": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "S": [
+        [0,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "T": [
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "U": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "V": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,0,1,0],
+        [0,0,1,0,0],
+    ],
+    "W": [
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,0,1,0,1],
+        [1,1,1,1,0],
+    ],
+    "X": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,0],
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+    ],
+    "Y": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "Z": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "?": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,1,1,1],
+        [0,0,0,0,0],
+        [0,0,1,0,0],
+    ],
+    "!": [
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,0,0],
+        [0,0,1,0,0],
+    ],
+    "(": [
+        [0,0,0,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,1,1],
+    ],
+    ")": [
+        [1,1,0,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,0,0,0],
+    ],
+    "[": [
+        [0,0,1,1,1],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,1,1],
+    ],
+    "]": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,0,0],
+    ],
+    "{": [
+        [0,0,1,1,1],
+        [0,0,1,0,0],
+        [0,1,0,0,0],
+        [0,0,1,0,0],
+        [0,0,1,1,1],
+    ],
+    "}": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,0,1,0],
+        [0,0,1,0,0],
+        [1,1,1,0,0],
+    ],
+    ",": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ".": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ":": [
+        [1,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    ";": [
+        [1,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,0,0,0,0],
+        [1,0,0,0,0],
+    ],
+    " ": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+    ],
+    "-": [
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,0],
+        [0,0,0,0,0],
+    ],
+    "^": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "~": [
+        [1,0,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,1,1],
+        [0,0,0,0,0],
+        [1,0,0,1,0],
+    ]
+};
 
 export class PacxonGame {
   constructor(width, height, autoPlay = false) {
@@ -50,6 +328,7 @@ export class PacxonGame {
     this.autoPlay = autoPlay;
     this.lastDirectionChange = 0;
     this.gameEndTime = 0;
+    this.flashState = false; // For flashing START text
     
     this.gameState = this.getInitialState();
     
@@ -71,8 +350,8 @@ export class PacxonGame {
     }
     
     return {
-      scene: 'PLAYING', // Start directly in game for flipdot
-      playing: true,
+      scene: 'TITLE', // Start with title screen
+      playing: false,
       score: 0,
       lives: 6,
       gameOver: false,
@@ -94,6 +373,12 @@ export class PacxonGame {
         const key = e.key.toLowerCase();
         this.keys.add(key);
         
+        // Start game from title screen on any key press
+        if (this.gameState.scene === 'TITLE') {
+          this.startGame();
+          return;
+        }
+        
         if (key === 'arrowup' || key === 'w') this.dir = 'UP';
         else if (key === 'arrowdown' || key === 's') this.dir = 'DOWN';
         else if (key === 'arrowleft' || key === 'a') this.dir = 'LEFT';
@@ -109,7 +394,17 @@ export class PacxonGame {
 
   // Method to set direction from external input
   setDirection(direction) {
+    // Start game from title screen on any direction press
+    if (this.gameState.scene === 'TITLE') {
+      this.startGame();
+      return;
+    }
     this.dir = direction;
+  }
+
+  startGame() {
+    this.gameState.scene = 'PLAYING';
+    this.gameState.playing = true;
   }
 
   restart() {
@@ -156,6 +451,11 @@ export class PacxonGame {
 
   update() {
     this.tick++;
+    
+    // Update flash state for title screen (flash every 15 ticks, ~0.25 seconds at 60fps)
+    if (this.tick % 15 === 0) {
+      this.flashState = !this.flashState;
+    }
     
     if (this.gameState.scene !== 'PLAYING' || this.gameState.gameOver || this.gameState.win || !this.gameState.playing) {
       return;
@@ -276,10 +576,77 @@ export class PacxonGame {
     }
   }
 
+  renderBigText(ctx, text, x, y, animated = false) {
+    let currentX = x;
+    const spacing = 2; // Space between letters
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i].toUpperCase();
+      
+      if (char === ' ') {
+        currentX += 4; // Space width
+        continue;
+      }
+      
+      const matrix = lettersBig[char];
+      if (!matrix) continue;
+      
+      // Calculate wave offset if animated
+      let waveOffset = 0;
+      if (animated) {
+        // Create a sine wave effect based on character position and time
+        const frequency = 0.8; // Wave frequency
+        const amplitude = 2; // Wave height in pixels
+        waveOffset = Math.floor(Math.sin((this.tick * 0.15) + (i * frequency)) * amplitude);
+      }
+      
+      // Draw the letter with wave offset
+      for (let py = 0; py < matrix.length; py++) {
+        for (let px = 0; px < matrix[py].length; px++) {
+          if (matrix[py][px]) {
+            ctx.fillRect(currentX + px, y + py + waveOffset, 1, 1);
+          }
+        }
+      }
+      
+      // Move to next letter position
+      currentX += matrix[0].length + spacing;
+    }
+  }
+
   render(ctx) {
     // Clear canvas
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, this.width, this.height);
+
+    // Render title screen
+    if (this.gameState.scene === 'TITLE') {
+      ctx.fillStyle = "#fff";
+      
+      // Calculate center positions for "PAC XON"
+      // PAC = 5+2+5+2+5 = 19 pixels
+      // space = 4 pixels
+      // XON = 5+2+5+2+5 = 19 pixels
+      // Total = 19 + 4 + 19 = 42 pixels
+      const titleWidth = 42;
+      const titleX = Math.floor((this.width - titleWidth) / 2);
+      const titleY = 6;
+      
+      // Render animated wavy "PAC XON" text
+      this.renderBigText(ctx, "PAC XON", titleX, titleY, true);
+      
+      // Render flashing "START" text
+      if (this.flashState) {
+        // START = 5+2+5+2+5+2+5+2+5 = 35 pixels
+        const startWidth = 35;
+        const startX = Math.floor((this.width - startWidth) / 2);
+        const startY = 18;
+        
+        this.renderBigText(ctx, "START", startX, startY);
+      }
+      
+      return;
+    }
 
     // Always render the game field, even during game over or win states
     if (this.gameState.scene === 'PLAYING') {
