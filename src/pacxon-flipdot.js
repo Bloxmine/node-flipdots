@@ -329,12 +329,14 @@ export class PacxonGame {
     this.lastDirectionChange = 0;
     this.gameEndTime = 0;
     this.flashState = false; // For flashing START text
+    this.lastGamepadState = {}; // Track previous gamepad button states
     
     this.gameState = this.getInitialState();
     
     // Input handling setup (if in browser environment)
     if (typeof window !== 'undefined') {
       this.setupInputHandlers();
+      this.setupGamepadSupport();
     }
   }
 
@@ -389,6 +391,136 @@ export class PacxonGame {
       document.addEventListener('keyup', (e) => {
         this.keys.delete(e.key.toLowerCase());
       });
+    }
+  }
+
+  setupGamepadSupport() {
+    // For browser environment only
+    if (typeof window !== 'undefined') {
+      // Listen for gamepad connection
+      window.addEventListener('gamepadconnected', (e) => {
+        console.log('🎮 Gamepad connected:', e.gamepad.id);
+        console.log('   Buttons:', e.gamepad.buttons.length);
+        console.log('   Axes:', e.gamepad.axes.length);
+        console.log('💡 Press any button to see which button numbers are detected');
+      });
+
+      window.addEventListener('gamepaddisconnected', (e) => {
+        console.log('🎮 Gamepad disconnected:', e.gamepad.id);
+      });
+    }
+  }
+
+  pollGamepad() {
+    // Only poll if in browser environment
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
+
+    const gamepads = navigator.getGamepads();
+    if (!gamepads) return;
+
+    for (let i = 0; i < gamepads.length; i++) {
+      const gamepad = gamepads[i];
+      if (!gamepad) continue;
+
+      const stateKey = `gamepad${i}`;
+      const lastState = this.lastGamepadState[stateKey] || {};
+
+      // Debug: Log all button presses to help identify button mapping
+      if (!lastState.debugLogged) {
+        gamepad.buttons.forEach((button, index) => {
+          if (button.pressed && !lastState[`btn${index}`]) {
+            console.log(`🎮 Button ${index} pressed`);
+          }
+        });
+        gamepad.axes.forEach((value, index) => {
+          if (Math.abs(value) > 0.5 && !lastState[`axis${index}`]) {
+            console.log(`🎮 Axis ${index}: ${value.toFixed(2)}`);
+          }
+        });
+      }
+
+      // Check multiple possible D-pad mappings:
+      // Standard mapping: buttons 12-15
+      // Some USB NES controllers: axes 0-1 or axes 9
+      // Alternative: buttons 4-7 (some retro controllers)
+      
+      // Check axes first (most common for NES USB adapters)
+      let dpadUp = false;
+      let dpadDown = false;
+      let dpadLeft = false;
+      let dpadRight = false;
+
+      // Check all possible axis configurations
+      if (gamepad.axes.length >= 2) {
+        dpadUp = gamepad.axes[1] < -0.5 || gamepad.axes[7] < -0.5;
+        dpadDown = gamepad.axes[1] > 0.5 || gamepad.axes[7] > 0.5;
+        dpadLeft = gamepad.axes[0] < -0.5 || gamepad.axes[6] < -0.5;
+        dpadRight = gamepad.axes[0] > 0.5 || gamepad.axes[6] > 0.5;
+      }
+
+      // Also check button-based D-pads (standard mapping and alternatives)
+      dpadUp = dpadUp || gamepad.buttons[12]?.pressed || gamepad.buttons[4]?.pressed;
+      dpadDown = dpadDown || gamepad.buttons[13]?.pressed || gamepad.buttons[5]?.pressed;
+      dpadLeft = dpadLeft || gamepad.buttons[14]?.pressed || gamepad.buttons[6]?.pressed;
+      dpadRight = dpadRight || gamepad.buttons[15]?.pressed || gamepad.buttons[7]?.pressed;
+
+      // Start game from title screen on any button press or d-pad
+      if (this.gameState.scene === 'TITLE') {
+        const anyPressed = dpadUp || dpadDown || dpadLeft || dpadRight || 
+                          gamepad.buttons.some(btn => btn?.pressed);
+        if (anyPressed) {
+          console.log('🎮 Starting game from controller input');
+          this.startGame();
+          this.lastGamepadState[stateKey] = { dpadUp, dpadDown, dpadLeft, dpadRight };
+          return;
+        }
+      }
+
+      // Handle direction changes (only on new press, not held)
+      if (dpadUp && !lastState.dpadUp) {
+        console.log('🎮 D-pad UP');
+        this.dir = 'UP';
+      } else if (dpadDown && !lastState.dpadDown) {
+        console.log('🎮 D-pad DOWN');
+        this.dir = 'DOWN';
+      } else if (dpadLeft && !lastState.dpadLeft) {
+        console.log('🎮 D-pad LEFT');
+        this.dir = 'LEFT';
+      } else if (dpadRight && !lastState.dpadRight) {
+        console.log('🎮 D-pad RIGHT');
+        this.dir = 'RIGHT';
+      }
+
+      // Check multiple possible Start button positions
+      const startPressed = gamepad.buttons[9]?.pressed || // Standard start
+                          gamepad.buttons[8]?.pressed ||  // Select/Start alternative
+                          gamepad.buttons[3]?.pressed ||  // Some NES controllers
+                          gamepad.buttons[1]?.pressed;    // B button as alternative
+
+      if (startPressed && !lastState.start) {
+        console.log('🎮 Restart button pressed');
+        this.restart();
+      }
+
+      // Update last state - track all buttons and axes for debug
+      const newState = {
+        dpadUp,
+        dpadDown,
+        dpadLeft,
+        dpadRight,
+        start: startPressed,
+        debugLogged: true
+      };
+      
+      // Track individual buttons for debug logging
+      gamepad.buttons.forEach((button, index) => {
+        newState[`btn${index}`] = button.pressed;
+      });
+      gamepad.axes.forEach((value, index) => {
+        newState[`axis${index}`] = Math.abs(value) > 0.5;
+      });
+
+      this.lastGamepadState[stateKey] = newState;
     }
   }
 
@@ -451,6 +583,9 @@ export class PacxonGame {
 
   update() {
     this.tick++;
+    
+    // Poll gamepad input every frame
+    this.pollGamepad();
     
     // Update flash state for title screen (flash every 15 ticks, ~0.25 seconds at 60fps)
     if (this.tick % 15 === 0) {

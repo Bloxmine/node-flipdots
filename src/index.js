@@ -9,6 +9,7 @@ import { sendFrame } from "./preview.js";
 // Pacxon game imports
 import { PacxonGame } from "./pacxon-flipdot.js";
 import { Xbox360Controller } from "./controller.js";
+import { NESController } from "./nes-controller.js";
 
 const IS_DEV = process.argv.includes("--dev");
 
@@ -82,9 +83,13 @@ const pacxonGame = new PacxonGame(width, height, false);
 let controllerConnected = false;
 let keyboardInputActive = true; // Keyboard is always available
 
-// Try to initialize Xbox 360 controller
+// Try to initialize Xbox 360 controller first
 const controller = new Xbox360Controller();
 
+// Also try to initialize NES controller
+const nesController = new NESController();
+
+// Setup event handlers for Xbox controller
 controller.on('connected', () => {
 	controllerConnected = true;
 	console.log('✅ Xbox 360 controller connected! Dual input mode: Controller + Keyboard both active.');
@@ -93,8 +98,7 @@ controller.on('connected', () => {
 });
 
 controller.on('notFound', () => {
-	console.log('🎮 No Xbox 360 controller found. Keyboard-only input mode.');
-	console.log('   Keyboard: Arrow keys/WASD to move, R to restart, Ctrl+C to exit');
+	console.log('🔍 No Xbox 360 controller found (checked /dev/input/js*)');
 });
 
 controller.on('disconnected', () => {
@@ -103,12 +107,9 @@ controller.on('disconnected', () => {
 });
 
 controller.on('error', (error) => {
-	console.error('❌ Controller error:', error.message);
-	controllerConnected = false;
-	console.log('🔄 Falling back to keyboard input.');
+	console.error('❌ Xbox controller error:', error.message);
 });
 
-// Controller input handlers
 controller.on('direction', (direction) => {
 	pacxonGame.setDirection(direction);
 });
@@ -124,6 +125,33 @@ controller.on('buttonPress', (button) => {
 			pacxonGame.restart();
 			break;
 	}
+});
+
+// Setup event handlers for NES controller
+nesController.on('connected', () => {
+	controllerConnected = true;
+	console.log('✅ NES controller ready!');
+	console.log('   All input methods active: NES Controller + Keyboard');
+});
+
+nesController.on('notFound', () => {
+	if (!controller.isConnected) {
+		console.log('⌨️  Keyboard-only input mode.');
+		console.log('   Keyboard: Arrow keys/WASD to move, R to restart, Ctrl+C to exit');
+		console.log('');
+		console.log('💡 Tip: If you have a USB controller connected:');
+		console.log('   - For NES controllers at /dev/input/event*, you may need:');
+		console.log('     sudo usermod -a -G input $USER');
+		console.log('   - Then log out and back in for changes to take effect');
+	}
+});
+
+nesController.on('direction', (direction) => {
+	pacxonGame.setDirection(direction);
+});
+
+nesController.on('restart', () => {
+	pacxonGame.restart();
 });
 
 // Keyboard input setup (always available)

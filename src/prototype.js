@@ -8,6 +8,8 @@ import { updatePrototypeRenderer, setGameInstance } from "./prototype-preview.js
 
 // Pacxon game imports
 import { PacxonGame } from "./pacxon-flipdot.js";
+import { Xbox360Controller } from "./controller.js";
+import { NESController } from "./nes-controller.js";
 
 const IS_DEV = process.argv.includes("--dev");
 
@@ -53,9 +55,72 @@ const pacxonGame = new PacxonGame(width, height, false);
 // Set the game instance for web controls
 setGameInstance(pacxonGame);
 
+// Input handling setup
+let controllerConnected = false;
+
+// Try to initialize Xbox 360 controller first
+const controller = new Xbox360Controller();
+
+// Also try to initialize NES controller
+const nesController = new NESController();
+
+// Setup event handlers for Xbox controller
+controller.on('connected', () => {
+	controllerConnected = true;
+	console.log('✅ Xbox 360 controller connected!');
+});
+
+controller.on('notFound', () => {
+	console.log('🔍 No Xbox 360 controller found (checked /dev/input/js*)');
+});
+
+controller.on('direction', (direction) => {
+	pacxonGame.setDirection(direction);
+});
+
+controller.on('restart', () => {
+	pacxonGame.restart();
+});
+
+controller.on('buttonPress', (button) => {
+	switch (button) {
+		case 'A':
+		case 'START':
+			pacxonGame.restart();
+			break;
+	}
+});
+
+// Setup event handlers for NES controller
+nesController.on('connected', () => {
+	controllerConnected = true;
+	console.log('✅ NES controller ready for prototype!');
+});
+
+nesController.on('notFound', () => {
+	if (!controller.isConnected) {
+		console.log('⌨️  Web controls and keyboard available');
+		console.log('   Access controls at http://localhost:3001');
+	}
+});
+
+nesController.on('direction', (direction) => {
+	pacxonGame.setDirection(direction);
+});
+
+nesController.on('restart', () => {
+	pacxonGame.restart();
+});
+
 // Handle Ctrl+C to exit gracefully
 process.on('SIGINT', () => {
 	console.log('\nExiting...');
+	if (controller && controller.isConnected) {
+		controller.disconnect();
+	}
+	if (nesController && nesController.isConnected) {
+		nesController.disconnect();
+	}
 	process.exit();
 });
 
