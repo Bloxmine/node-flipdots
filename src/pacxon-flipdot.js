@@ -20,6 +20,7 @@ const characters = {
   "9":[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
   "P":[[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
   "X":[[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1]],
+  "L":[[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
 };
 const lettersBig = {
       "A": [
@@ -315,6 +316,76 @@ const lettersBig = {
         [1,0,1,1,1],
         [0,0,0,0,0],
         [1,0,0,1,0],
+    ],
+        "0": [
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,0,1,0,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "1": [
+        [1,1,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+        [1,1,1,1,1],
+    ],
+    "2": [
+        [1,1,1,1,0],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+    ],
+    "3": [
+        [1,1,1,1,0],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "4": [
+        [1,0,0,0,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,0,0,1],
+    ],
+    "5": [
+        [1,1,1,1,1],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,0],
+    ],
+    "6": [
+        [1,1,1,1,0],
+        [1,0,0,0,0],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+    ],
+    "7": [
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [0,0,0,1,0],
+        [0,0,1,0,0],
+        [0,0,1,0,0],
+    ],
+    "8": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [1,0,0,0,1],
+        [0,1,1,1,1],
+    ],
+    "9": [
+        [1,1,1,1,0],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+        [0,0,0,0,1],
+        [1,1,1,1,1],
     ]
 };
 
@@ -330,6 +401,9 @@ export class PacxonGame {
     this.gameEndTime = 0;
     this.flashState = false; // For flashing START text
     this.lastGamepadState = {}; // Track previous gamepad button states
+    this.currentLevel = 1; // Track current level
+    this.baseSpeed = 0.4; // Base speed for enemies
+    this.transitionStartTime = 0; // Track when level transition started
     
     this.gameState = this.getInitialState();
     
@@ -340,7 +414,7 @@ export class PacxonGame {
     }
   }
 
-  getInitialState() {
+  getInitialState(keepScore = false, keepLevel = false, showTransition = false) {
     const initialWalls = this.makeEmpty(GRID_W, GRID_H, false);
     
     // Create border walls
@@ -351,19 +425,22 @@ export class PacxonGame {
       initialWalls[y][0] = initialWalls[y][GRID_W - 1] = true;
     }
     
+    // Calculate speed multiplier based on current level
+    const speedMultiplier = 1 + (this.currentLevel - 1) * 0.15; // 15% faster each level
+    
     return {
-      scene: 'TITLE', // Start with title screen
-      playing: false,
-      score: 0,
-      lives: 6,
+      scene: showTransition ? 'LEVEL_TRANSITION' : (keepScore ? 'PLAYING' : 'TITLE'),
+      playing: keepScore && !showTransition ? true : false,
+      score: keepScore ? this.gameState.score : 0,
+      lives: keepScore ? this.gameState.lives : 6,
       gameOver: false,
       win: false,
       player: { x: 1, y: 1 },
       trail: new Set(),
       walls: initialWalls,
       enemies: [
-        { x: GRID_W / 2, y: GRID_H / 2, vx: 0.5, vy: 0.37 },
-        { x: GRID_W / 3, y: GRID_H / 3, vx: -0.4, vy: 0.45 }
+        { x: GRID_W / 2, y: GRID_H / 2, vx: 0.5 * speedMultiplier, vy: 0.37 * speedMultiplier },
+        { x: GRID_W / 3, y: GRID_H / 3, vx: -0.4 * speedMultiplier, vy: 0.45 * speedMultiplier }
       ],
     };
   }
@@ -540,9 +617,26 @@ export class PacxonGame {
   }
 
   restart() {
+    this.currentLevel = 1;
     this.gameState = this.getInitialState();
     this.dir = null;
     this.tick = 0;
+  }
+
+  nextLevel() {
+    this.currentLevel++;
+    this.gameState = this.getInitialState(true, true, true); // Keep score, advance level, show transition
+    this.transitionStartTime = Date.now();
+    this.dir = null;
+    this.tick = 0;
+    
+    // Start the actual level after 2.5 seconds
+    setTimeout(() => {
+      if (this.gameState.scene === 'LEVEL_TRANSITION') {
+        this.gameState.scene = 'PLAYING';
+        this.gameState.playing = true;
+      }
+    }, 2500);
   }
 
   // Helper functions
@@ -587,7 +681,7 @@ export class PacxonGame {
     // Poll gamepad input every frame
     this.pollGamepad();
     
-    // Update flash state for title screen (flash every 15 ticks, ~0.25 seconds at 60fps)
+    // Update flash state for title screen and level transition (flash every 15 ticks, ~0.25 seconds at 60fps)
     if (this.tick % 15 === 0) {
       this.flashState = !this.flashState;
     }
@@ -681,6 +775,12 @@ export class PacxonGame {
     if (!this.gameState.win && pct >= WIN_PCT) {
       this.gameState.win = true;
       this.gameState.playing = false;
+      // Automatically advance to next level after a short delay
+      setTimeout(() => {
+        if (this.gameState.win) {
+          this.nextLevel();
+        }
+      }, 2000); // 2 second delay to show win message
     }
   }
 
@@ -753,6 +853,33 @@ export class PacxonGame {
     // Clear canvas
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, this.width, this.height);
+
+    // Render level transition screen
+    if (this.gameState.scene === 'LEVEL_TRANSITION') {
+      // Only render if flash state is on
+      if (this.flashState) {
+        ctx.fillStyle = "#fff";
+        
+        // Render "LEVEL X" text
+        const levelText = `LEVEL ${this.currentLevel}`;
+        
+        // Calculate width for centering
+        // Rough calculation: each char is ~5-7 pixels wide with 2 spacing
+        // LEVEL = 5+2+5+2+5+2+5+2+5 = 33
+        // space = 4
+        // number can be 1-2 digits, let's estimate based on digits
+        const numDigits = this.currentLevel.toString().length;
+        const numberWidth = numDigits * 7; // ~5 pixels + 2 spacing per digit
+        const textWidth = 33 + 4 + numberWidth;
+        
+        const textX = Math.floor((this.width - textWidth) / 2);
+        const textY = Math.floor((this.height - 5) / 2); // Center vertically (5 is char height)
+        
+        this.renderBigText(ctx, levelText, textX, textY, false);
+      }
+      
+      return;
+    }
 
     // Render title screen
     if (this.gameState.scene === 'TITLE') {
@@ -848,11 +975,11 @@ export class PacxonGame {
 
   getStatus() {
     if (this.gameState.gameOver) {
-      return `GAME OVER! Final Score: ${this.gameState.score} • Press R to restart`;
+      return `GAME OVER! Level: ${this.currentLevel} • Final Score: ${this.gameState.score} • Press R to restart`;
     }
     
     if (this.gameState.win) {
-      return `YOU WIN! Final Score: ${this.gameState.score} • Press R to restart`;
+      return `LEVEL ${this.currentLevel} COMPLETE! Advancing to Level ${this.currentLevel + 1}...`;
     }
     
     if (this.gameState.scene !== 'PLAYING') {
@@ -867,6 +994,6 @@ export class PacxonGame {
     }
     
     const pct = Math.round((filled / (GRID_W * GRID_H)) * 100);
-    return `Score: ${this.gameState.score} • ${pct}% Filled • Lives: ${this.gameState.lives}`;
+    return `Level: ${this.currentLevel} • Score: ${this.gameState.score} • ${pct}% Filled • Lives: ${this.gameState.lives}`;
   }
 }
