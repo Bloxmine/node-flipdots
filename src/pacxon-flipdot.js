@@ -454,7 +454,7 @@ export class PacxonGame {
       scene: showTransition ? 'LEVEL_TRANSITION' : (keepScore ? 'PLAYING' : 'TITLE'),
       playing: keepScore && !showTransition ? true : false,
       score: keepScore ? this.gameState.score : 0,
-      lives: keepScore ? this.gameState.lives : 1,
+      lives: keepScore ? this.gameState.lives : 3,
       gameOver: false,
       win: false,
       player: { x: 1, y: 1 },

@@ -6,11 +6,21 @@ const PORT = 3001; // Different port from the original preview
 
 // Serve static files (images) from the images directory
 app.use('/images', express.static('images'));
+// Serve static files (audio) from the audio directory
+app.use('/audio', express.static('audio'));
 
 let prototypeRenderer = null;
 
 // Global reference to the game instance
 let gameInstance = null;
+
+// Track previous game state to detect changes
+let previousGameState = {
+  scene: null,
+  lives: null,
+  playerX: null,
+  playerY: null,
+};
 
 // Function to set the game instance
 export function setGameInstance(game) {
@@ -204,7 +214,62 @@ app.get("/", (req, res) => {
         </div>
       </div>
       
+      <!-- Audio elements -->
+      <audio id="audioBeginning" src="/audio/pacman_beginning.wav" preload="auto"></audio>
+      <audio id="audioChomp" src="/audio/pacman_chomp.wav" preload="auto"></audio>
+      <audio id="audioDeath" src="/audio/pacman_death.wav" preload="auto"></audio>
+      <audio id="audioIntermission" src="/audio/pacman_intermission.wav" preload="auto"></audio>
+      
       <script>
+        // Audio elements
+        const audioElements = {
+          'pacman_beginning.wav': document.getElementById('audioBeginning'),
+          'pacman_chomp.wav': document.getElementById('audioChomp'),
+          'pacman_death.wav': document.getElementById('audioDeath'),
+          'pacman_intermission.wav': document.getElementById('audioIntermission')
+        };
+
+        // Track currently playing sounds to avoid overlaps
+        let lastSoundTime = {};
+        
+        // Function to play sound
+        function playSound(soundName) {
+          const audio = audioElements[soundName];
+          if (!audio) return;
+          
+          // Special handling for chomp sound - don't restart if still playing
+          if (soundName === 'pacman_chomp.wav') {
+            // Don't play if currently playing
+            if (!audio.paused && audio.currentTime > 0 && audio.currentTime < audio.duration) {
+              return; // Still playing, skip
+            }
+            
+            // Additional debounce - wait at least 150ms after it finishes
+            const now = Date.now();
+            if (lastSoundTime[soundName] && now - lastSoundTime[soundName] < 150) {
+              return;
+            }
+            lastSoundTime[soundName] = now;
+          }
+          
+          // Stop and reset audio for non-looping sounds
+          audio.pause();
+          audio.currentTime = 0;
+          audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        // Check for sound events every 100ms
+        setInterval(() => {
+          fetch('/sound-event')
+            .then(response => response.json())
+            .then(data => {
+              if (data.sound) {
+                playSound(data.sound);
+              }
+            })
+            .catch(() => {});
+        }, 100);
+        
         // Auto-refresh the image every 100ms
         setInterval(() => {
           const img = document.getElementById('prototypeDisplay');
@@ -333,6 +398,56 @@ app.get("/status", (req, res) => {
   
   const status = gameInstance.getStatus();
   res.send(status || "Game running...");
+});
+
+// Get sound events based on game state changes
+app.get("/sound-event", (req, res) => {
+  if (!gameInstance) {
+    return res.json({ sound: null });
+  }
+
+  const currentState = gameInstance.gameState;
+  let soundToPlay = null;
+
+  // Check for scene changes
+  if (currentState.scene !== previousGameState.scene) {
+    if (currentState.scene === 'TITLE') {
+      soundToPlay = 'pacman_beginning.wav';
+    }
+    previousGameState.scene = currentState.scene;
+  }
+
+  // Check if showing high scores (separate from scene change)
+  if (currentState.scene === 'NAME_ENTRY' && 
+      gameInstance.nameEntry.showingScores && 
+      !previousGameState.showingScores) {
+    soundToPlay = 'pacman_intermission.wav';
+  }
+  previousGameState.showingScores = gameInstance.nameEntry.showingScores;
+
+  // Check for life lost (death sound)
+  if (currentState.lives !== null && 
+      previousGameState.lives !== null && 
+      currentState.lives < previousGameState.lives) {
+    soundToPlay = 'pacman_death.wav';
+  }
+  previousGameState.lives = currentState.lives;
+
+  // Check for player movement (chomp sound)
+  if (currentState.scene === 'PLAYING' && currentState.playing) {
+    const playerX = currentState.player.x;
+    const playerY = currentState.player.y;
+    
+    if (previousGameState.playerX !== null && 
+        (playerX !== previousGameState.playerX || playerY !== previousGameState.playerY)) {
+      soundToPlay = 'pacman_chomp.wav';
+    }
+    
+    previousGameState.playerX = playerX;
+    previousGameState.playerY = playerY;
+  }
+
+  res.json({ sound: soundToPlay });
 });
 
 // Function to update the prototype renderer from external source
