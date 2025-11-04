@@ -1,9 +1,19 @@
 // --- PACXON GAME FOR FLIPDOT DISPLAY ---
 
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Configuration adapted for flipdot display
 const GRID_W = 84;
 const GRID_H = 28;
 const WIN_PCT = 80;
+
+// High scores file path
+const HIGH_SCORES_FILE = path.join(__dirname, '..', 'high-scores.json');
 
 // Character font for text rendering
 const characters = {
@@ -405,6 +415,18 @@ export class PacxonGame {
     this.baseSpeed = 0.4; // Base speed for enemies
     this.transitionStartTime = 0; // Track when level transition started
     
+    // High score name entry state
+    this.nameEntry = {
+      name: ['A', 'A', 'A'], // Three letter name
+      cursorPos: 0, // Which letter is being edited (0-2)
+      lastInputTime: 0, // Debounce input
+      showingScores: false, // Whether to show the score list after submission
+      startTime: 0, // Time when name entry started (to prevent accidental input)
+      scoresDisplayTime: 0, // Time when scores started displaying
+      scrollOffset: 0, // Current scroll offset for high scores list
+    };
+    this.highScores = this.loadHighScores();
+    
     this.gameState = this.getInitialState();
     
     // Input handling setup (if in browser environment)
@@ -432,7 +454,7 @@ export class PacxonGame {
       scene: showTransition ? 'LEVEL_TRANSITION' : (keepScore ? 'PLAYING' : 'TITLE'),
       playing: keepScore && !showTransition ? true : false,
       score: keepScore ? this.gameState.score : 0,
-      lives: keepScore ? this.gameState.lives : 6,
+      lives: keepScore ? this.gameState.lives : 1,
       gameOver: false,
       win: false,
       player: { x: 1, y: 1 },
@@ -451,6 +473,12 @@ export class PacxonGame {
       document.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase();
         this.keys.add(key);
+        
+        // Handle name entry screen
+        if (this.gameState.scene === 'NAME_ENTRY') {
+          this.handleNameEntryInput(key);
+          return;
+        }
         
         // Start game from title screen on any key press
         if (this.gameState.scene === 'TITLE') {
@@ -541,6 +569,33 @@ export class PacxonGame {
       dpadLeft = dpadLeft || gamepad.buttons[14]?.pressed || gamepad.buttons[6]?.pressed;
       dpadRight = dpadRight || gamepad.buttons[15]?.pressed || gamepad.buttons[7]?.pressed;
 
+      // Handle name entry screen
+      if (this.gameState.scene === 'NAME_ENTRY') {
+        if (dpadUp && !lastState.dpadUp) {
+          this.handleNameEntryInput('arrowup');
+        } else if (dpadDown && !lastState.dpadDown) {
+          this.handleNameEntryInput('arrowdown');
+        } else if (dpadLeft && !lastState.dpadLeft) {
+          this.handleNameEntryInput('arrowleft');
+        } else if (dpadRight && !lastState.dpadRight) {
+          this.handleNameEntryInput('arrowright');
+        }
+        
+        // Check for submit button (Start or A button)
+        const submitPressed = gamepad.buttons[9]?.pressed || // Start
+                             gamepad.buttons[0]?.pressed;    // A button
+        if (submitPressed && !lastState.submit) {
+          this.handleNameEntryInput('enter');
+        }
+        
+        this.lastGamepadState[stateKey] = {
+          dpadUp, dpadDown, dpadLeft, dpadRight,
+          submit: submitPressed,
+          debugLogged: true
+        };
+        return;
+      }
+      
       // Start game from title screen on any button press or d-pad
       if (this.gameState.scene === 'TITLE') {
         const anyPressed = dpadUp || dpadDown || dpadLeft || dpadRight || 
@@ -603,12 +658,36 @@ export class PacxonGame {
 
   // Method to set direction from external input
   setDirection(direction) {
+    // Handle name entry
+    if (this.gameState.scene === 'NAME_ENTRY') {
+      if (direction === 'UP') this.handleNameEntryInput('arrowup');
+      else if (direction === 'DOWN') this.handleNameEntryInput('arrowdown');
+      else if (direction === 'LEFT') this.handleNameEntryInput('arrowleft');
+      else if (direction === 'RIGHT') this.handleNameEntryInput('arrowright');
+      return;
+    }
+    
     // Start game from title screen on any direction press
     if (this.gameState.scene === 'TITLE') {
       this.startGame();
       return;
     }
     this.dir = direction;
+  }
+
+  // Method to handle button presses from external input (controllers)
+  handleButtonPress(button) {
+    if (this.gameState.scene === 'NAME_ENTRY') {
+      // If showing scores, ignore button presses (will auto-restart after 10 seconds)
+      if (this.nameEntry.showingScores) {
+        return;
+      }
+      
+      // A button, B button, or START button submits the name
+      if (button === 'A' || button === 'B' || button === 'START') {
+        this.handleNameEntryInput('enter');
+      }
+    }
   }
 
   startGame() {
@@ -675,6 +754,119 @@ export class PacxonGame {
     return keep;
   }
 
+  // High score management methods
+  loadHighScores() {
+    // Only load from file in Node.js environment
+    if (typeof fs === 'undefined') {
+      return [];
+    }
+    
+    try {
+      if (fs.existsSync(HIGH_SCORES_FILE)) {
+        const data = fs.readFileSync(HIGH_SCORES_FILE, 'utf8');
+        return JSON.parse(data);
+      }
+    } catch (err) {
+      console.error('Error loading high scores:', err);
+    }
+    return [];
+  }
+
+  saveHighScores() {
+    // Only save to file in Node.js environment
+    if (typeof fs === 'undefined') {
+      console.log('High scores (browser mode):', this.highScores);
+      return;
+    }
+    
+    try {
+      fs.writeFileSync(HIGH_SCORES_FILE, JSON.stringify(this.highScores, null, 2));
+      console.log(`✅ High score saved! ${this.highScores[this.highScores.length - 1]?.name}: ${this.highScores[this.highScores.length - 1]?.score}`);
+    } catch (err) {
+      console.error('Error saving high scores:', err);
+    }
+  }
+
+  addHighScore(name, score, level) {
+    this.highScores.push({
+      name: name.join(''),
+      score,
+      level,
+      date: new Date().toISOString()
+    });
+    
+    // Sort by score descending
+    this.highScores.sort((a, b) => b.score - a.score);
+    
+    // Keep only top 10
+    this.highScores = this.highScores.slice(0, 10);
+    
+    this.saveHighScores();
+  }
+
+  handleNameEntryInput(key) {
+    const now = Date.now();
+    
+    // If showing scores, ignore input (will auto-restart after 10 seconds)
+    if (this.nameEntry.showingScores) {
+      return;
+    }
+    
+    // Prevent input for first 500ms after entering name entry screen (to avoid accidental input)
+    if (now - this.nameEntry.startTime < 500) {
+      return;
+    }
+    
+    // Debounce input to prevent too rapid changes
+    if (now - this.nameEntry.lastInputTime < 150) {
+      return;
+    }
+    this.nameEntry.lastInputTime = now;
+
+    if (key === 'arrowup') {
+      // Cycle letter up (A-Z)
+      const currentCharCode = this.nameEntry.name[this.nameEntry.cursorPos].charCodeAt(0);
+      let newCharCode = currentCharCode + 1;
+      if (newCharCode > 90) newCharCode = 65; // Wrap from Z to A
+      this.nameEntry.name[this.nameEntry.cursorPos] = String.fromCharCode(newCharCode);
+    } else if (key === 'arrowdown') {
+      // Cycle letter down (Z-A)
+      const currentCharCode = this.nameEntry.name[this.nameEntry.cursorPos].charCodeAt(0);
+      let newCharCode = currentCharCode - 1;
+      if (newCharCode < 65) newCharCode = 90; // Wrap from A to Z
+      this.nameEntry.name[this.nameEntry.cursorPos] = String.fromCharCode(newCharCode);
+    } else if (key === 'arrowright') {
+      // If on last character, pressing right submits the score
+      if (this.nameEntry.cursorPos === 2) {
+        // Submit score and show high scores list
+        this.addHighScore(this.nameEntry.name, this.gameState.score, this.currentLevel);
+        // Reset name entry for next time
+        this.nameEntry.name = ['A', 'A', 'A'];
+        this.nameEntry.cursorPos = 0;
+        // Show the scores list and record the time
+        this.nameEntry.showingScores = true;
+        this.nameEntry.scoresDisplayTime = Date.now();
+        this.nameEntry.scrollOffset = 0;
+      } else {
+        // Move cursor right
+        this.nameEntry.cursorPos++;
+      }
+    } else if (key === 'arrowleft') {
+      // Move cursor left
+      this.nameEntry.cursorPos = (this.nameEntry.cursorPos - 1 + 3) % 3;
+    } else if (key === 'enter' || key === ' ') {
+      // Submit score and show high scores list
+      this.addHighScore(this.nameEntry.name, this.gameState.score, this.currentLevel);
+      // Reset name entry for next time
+      this.nameEntry.name = ['A', 'A', 'A'];
+      this.nameEntry.cursorPos = 0;
+      // Show the scores list and record the time
+      this.nameEntry.showingScores = true;
+      this.nameEntry.scoresDisplayTime = Date.now();
+      this.nameEntry.scrollOffset = 0;
+    }
+  }
+
   update() {
     this.tick++;
     
@@ -684,6 +876,17 @@ export class PacxonGame {
     // Update flash state for title screen and level transition (flash every 15 ticks, ~0.25 seconds at 60fps)
     if (this.tick % 15 === 0) {
       this.flashState = !this.flashState;
+    }
+    
+    // Auto-restart after 10 seconds on high score screen
+    if (this.gameState.scene === 'NAME_ENTRY' && this.nameEntry.showingScores) {
+      const now = Date.now();
+      const elapsed = now - this.nameEntry.scoresDisplayTime;
+      if (elapsed >= 10000) {
+        this.nameEntry.showingScores = false;
+        this.restart();
+        return;
+      }
     }
     
     if (this.gameState.scene !== 'PLAYING' || this.gameState.gameOver || this.gameState.win || !this.gameState.playing) {
@@ -736,6 +939,9 @@ export class PacxonGame {
           this.gameState.gameOver = true;
           this.gameState.playing = false;
           this.gameState.lives = 0;
+          // Show name entry screen with delay to prevent accidental input
+          this.gameState.scene = 'NAME_ENTRY';
+          this.nameEntry.startTime = Date.now();
         }
         this.gameState.trail = new Set();
         this.gameState.player = { x: 1, y: 1 };
@@ -853,6 +1059,85 @@ export class PacxonGame {
     // Clear canvas
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, this.width, this.height);
+
+    // Render name entry screen
+    if (this.gameState.scene === 'NAME_ENTRY') {
+      ctx.fillStyle = "#fff";
+      
+      // Check if we're in the "showing scores" mode
+      if (this.nameEntry.showingScores) {
+        // Calculate scroll offset based on time (smooth sine wave motion)
+        const elapsed = Date.now() - this.nameEntry.scoresDisplayTime;
+        const scrollSpeed = 0.0006; // Adjust for slower/faster scrolling
+        
+        // Calculate how many items can fit on screen
+        const lineHeight = 6;
+        const visibleLines = Math.floor(this.height / lineHeight);
+        const totalScores = this.highScores.length;
+        
+        // Only scroll if there are more scores than can fit
+        if (totalScores > visibleLines) {
+          // Calculate max scroll (negative value)
+          const maxScroll = -(totalScores - visibleLines) * lineHeight;
+          
+          // Use sine wave for smooth back-and-forth motion
+          // Complete cycle in 10 seconds (matching the display time)
+          const scrollProgress = Math.sin(elapsed * scrollSpeed);
+          
+          // Map sine wave (-1 to 1) to scroll range (0 to maxScroll)
+          this.nameEntry.scrollOffset = (scrollProgress * 0.5 + 0.5) * maxScroll;
+        } else {
+          this.nameEntry.scrollOffset = 0;
+        }
+        
+        // Show high scores list with scrolling
+        const startY = 2;
+        
+        // Display all scores
+        for (let i = 0; i < totalScores; i++) {
+          const score = this.highScores[i];
+          const y = startY + (i * lineHeight) + this.nameEntry.scrollOffset;
+          
+          // Only render if within visible area (with small margin)
+          if (y >= -lineHeight && y < this.height) {
+            const scoreText = `${score.name}: ${score.score}`;
+            this.renderBigText(ctx, scoreText, 2, Math.round(y));
+          }
+        }
+        
+        return;
+      }
+      
+      // Name entry mode - show simple layout
+      // "GAME OVER"
+      this.renderBigText(ctx, "GAME OVER", 16, 2);
+      
+      // "SCORE: XXXX"
+      const scoreY = 10;
+      this.renderBigText(ctx, `SCORE: ${this.gameState.score}`, 2, scoreY);
+      
+      // "NAME: ABC" with cursor
+      const nameY = 18;
+      this.renderBigText(ctx, "NAME:", 2, nameY);
+      
+      const nameStartX = 36;
+      const letterSpacing = 8;
+      
+      for (let i = 0; i < 3; i++) {
+        const x = nameStartX + i * letterSpacing;
+        
+        // Draw letter
+        this.renderBigText(ctx, this.nameEntry.name[i], x, nameY);
+        
+        // Draw cursor (flashing underscore) under current letter
+        if (i === this.nameEntry.cursorPos && this.flashState) {
+          // Draw a line under the letter
+          ctx.fillRect(x, nameY + 6, 5, 1);
+        }
+      }
+      
+      return;
+    }
 
     // Render level transition screen
     if (this.gameState.scene === 'LEVEL_TRANSITION') {
@@ -974,8 +1259,17 @@ export class PacxonGame {
   }
 
   getStatus() {
+    if (this.gameState.scene === 'NAME_ENTRY') {
+      if (this.nameEntry.showingScores) {
+        const elapsed = Date.now() - this.nameEntry.scoresDisplayTime;
+        const remaining = Math.ceil((10000 - elapsed) / 1000);
+        return `High Scores • Auto-restart in ${remaining}s`;
+      }
+      return `Enter your name: ${this.nameEntry.name.join('')} • Use arrows to change letters • Press RIGHT on last letter to submit`;
+    }
+    
     if (this.gameState.gameOver) {
-      return `GAME OVER! Level: ${this.currentLevel} • Final Score: ${this.gameState.score} • Press R to restart`;
+      return `GAME OVER! Level: ${this.currentLevel} • Final Score: ${this.gameState.score}`;
     }
     
     if (this.gameState.win) {

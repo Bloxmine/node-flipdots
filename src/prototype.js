@@ -83,11 +83,14 @@ controller.on('restart', () => {
 });
 
 controller.on('buttonPress', (button) => {
-	switch (button) {
-		case 'A':
-		case 'START':
+	// Let game handle button press (for name entry, etc.)
+	pacxonGame.handleButtonPress(button);
+	
+	// Also handle restart for non-name-entry screens
+	if (button === 'A' || button === 'START') {
+		if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
 			pacxonGame.restart();
-			break;
+		}
 	}
 });
 
@@ -110,6 +113,18 @@ nesController.on('direction', (direction) => {
 
 nesController.on('restart', () => {
 	pacxonGame.restart();
+});
+
+nesController.on('buttonPress', (button) => {
+	// Let game handle button press (for name entry, etc.)
+	pacxonGame.handleButtonPress(button);
+	
+	// Also handle restart for non-name-entry screens
+	if (button === 'A' || button === 'START') {
+		if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
+			pacxonGame.restart();
+		}
+	}
 });
 
 // Handle Ctrl+C to exit gracefully

@@ -4,6 +4,9 @@ import { FlipDotPrototypeRenderer } from "./prototype-renderer.js";
 const app = express();
 const PORT = 3001; // Different port from the original preview
 
+// Serve static files (images) from the images directory
+app.use('/images', express.static('images'));
+
 let prototypeRenderer = null;
 
 // Global reference to the game instance
@@ -22,15 +25,22 @@ app.get("/", (req, res) => {
     <head>
       <title>FlipDot Prototype Display</title>
       <style>
-        body {
+        html, body {
           margin: 0;
+          padding: 0;
+          min-height: 100vh;
+          width: 100%;
+        }
+        
+        body {
           padding: 20px;
-          background: #000;
           color: #fff;
           font-family: monospace;
           display: flex;
           flex-direction: column;
           align-items: center;
+          background: url('/images/background.jpg') center/cover no-repeat fixed;
+          background-color: #000;
         }
         
         h1 {
