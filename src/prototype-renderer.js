@@ -9,25 +9,23 @@ export class FlipDotPrototypeRenderer {
     this.dotSize = dotSize;
     this.dotSpacing = dotSpacing;
     
-    // Calculate canvas size based on grid and dot parameters
+    // calculate canvas size based on grid and dot parameters
     this.canvasWidth = (this.gridWidth * (this.dotSize + this.dotSpacing)) - this.dotSpacing;
     this.canvasHeight = (this.gridHeight * (this.dotSize + this.dotSpacing)) - this.dotSpacing;
     
-    // Create a larger canvas for the prototype display
+    // create a larger canvas for the prototype display
     this.canvas = createCanvas(this.canvasWidth, this.canvasHeight);
     this.ctx = this.canvas.getContext("2d");
+    this.ctx.imageSmoothingEnabled = false; // no AA
     
-    // Disable anti-aliasing for crisp dots
-    this.ctx.imageSmoothingEnabled = false;
-    
-    // Create output directory if it doesn't exist
+    // create output directory if it doesn't exist
     const outputDir = "./output";
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
   }
   
-  // Render a single dot at grid position (x, y)
+  // render a single dot at grid position (x, y)
   renderDot(x, y, isOn = true) {
     if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) return;
     
@@ -39,41 +37,39 @@ export class FlipDotPrototypeRenderer {
     this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     
     if (isOn) {
-      // White dot (flipped state)
+      // white dot (flipped)
       this.ctx.fillStyle = "#f0f0f0";
       this.ctx.fill();
-      // Add slight shadow for 3D effect
       this.ctx.strokeStyle = "#d0d0d0";
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
     } else {
-      // Black dot (default state)
+      // black dot (default)
       this.ctx.fillStyle = "#1a1a1a";
       this.ctx.fill();
-      // Add slight highlight for 3D effect
       this.ctx.strokeStyle = "#2a2a2a";
       this.ctx.lineWidth = 1;
       this.ctx.stroke();
     }
   }
   
-  // Render from source canvas (like the game canvas)
+  // render from source canvas (like the game canvas)
   renderFromCanvas(sourceCanvas) {
-    // Clear the prototype canvas with dark background
+    // clear the prototype canvas with dark background
     this.ctx.fillStyle = "#0a0a0a";
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
     
-    // Get image data from source canvas
+    // get image data from source canvas
     const sourceCtx = sourceCanvas.getContext("2d");
     const imageData = sourceCtx.getImageData(0, 0, this.gridWidth, this.gridHeight);
     const data = imageData.data;
-    
-    // Render each pixel as a dot
+    // this is heavy crap.
+    // render each pixel as a dot
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
         const pixelIndex = (y * this.gridWidth + x) * 4;
         
-        // Check if pixel is bright (should be "on")
+        // check if pixel is bright (should be "on")
         const r = data[pixelIndex];
         const g = data[pixelIndex + 1];
         const b = data[pixelIndex + 2];
@@ -84,8 +80,8 @@ export class FlipDotPrototypeRenderer {
       }
     }
   }
-  
-  // Render from image data directly
+  // this needs to be improved.
+  // render from image data directly
   renderFromImageData(imageData) {
     // Clear the prototype canvas with dark background
     this.ctx.fillStyle = "#0a0a0a";

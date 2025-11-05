@@ -1,5 +1,8 @@
 // --- PACXON GAME FOR FLIPDOT DISPLAY ---
-
+// Authors: Hein Dijstelbloem (prototype rendering, conversion to work on the flipdot board, score system, level system, fonts, further gameplay), Mohammed Ali (initial code, initial version of the gameplay), Christ Kastelijn (pixel art animations), Krystiana Petrova (testing).
+// Date: 2025-11-05
+// Version: 0.2.0
+// Description: 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,17 +10,17 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration adapted for flipdot display
+// configuration adapted for flipdot display
 const GRID_W = 84;
 const GRID_H = 28;
 const WIN_PCT = 80;
 
-// High scores file path
+// high scores file path
 const HIGH_SCORES_FILE = path.join(__dirname, '..', 'high-scores.json');
 
-// Character font for text rendering
+// character font for text rendering
 const characters = {
-  // Numbers 0-9 (3-pixel wide format)
+  // these smaller numbers are used for the lives display.
   "0":[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
   "1":[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
   "2":[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
@@ -27,11 +30,10 @@ const characters = {
   "6":[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
   "7":[[1,1,1],[0,0,1],[0,0,1],[0,1,0],[0,1,0]],
   "8":[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-  "9":[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]],
-  "P":[[1,1,1,1,0],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0]],
-  "X":[[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1]],
-  "L":[[1,0,0],[1,0,0],[1,0,0],[1,0,0],[1,1,1]],
+  "9":[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
 };
+// these are all the letters in a 5x5 pixel grid.
+// drawn by Hein Dijstelbloem.
 const lettersBig = {
       "A": [
         [0,1,1,1,1],
@@ -409,27 +411,27 @@ export class PacxonGame {
     this.autoPlay = autoPlay;
     this.lastDirectionChange = 0;
     this.gameEndTime = 0;
-    this.flashState = false; // For flashing START text
-    this.lastGamepadState = {}; // Track previous gamepad button states
-    this.currentLevel = 1; // Track current level
-    this.baseSpeed = 0.4; // Base speed for enemies
-    this.transitionStartTime = 0; // Track when level transition started
+    this.flashState = false; // for flashing START text
+    this.lastGamepadState = {}; // track previous gamepad button states
+    this.currentLevel = 1; // track current level
+    this.baseSpeed = 0.4; // base speed for enemies
+    this.transitionStartTime = 0; // track when level transition started
     
-    // High score name entry state
+    // high score name entry state, three letters
     this.nameEntry = {
-      name: ['A', 'A', 'A'], // Three letter name
-      cursorPos: 0, // Which letter is being edited (0-2)
-      lastInputTime: 0, // Debounce input
-      showingScores: false, // Whether to show the score list after submission
-      startTime: 0, // Time when name entry started (to prevent accidental input)
-      scoresDisplayTime: 0, // Time when scores started displaying
-      scrollOffset: 0, // Current scroll offset for high scores list
+      name: ['A', 'A', 'A'],
+      cursorPos: 0, // which letter is being edited (0-2)
+      lastInputTime: 0,
+      showingScores: false,
+      startTime: 0,
+      scoresDisplayTime: 0,
+      scrollOffset: 0,
     };
     this.highScores = this.loadHighScores();
     
     this.gameState = this.getInitialState();
     
-    // Input handling setup (if in browser environment)
+    // input handling setup (if in browser environment)
     if (typeof window !== 'undefined') {
       this.setupInputHandlers();
       this.setupGamepadSupport();
@@ -439,7 +441,7 @@ export class PacxonGame {
   getInitialState(keepScore = false, keepLevel = false, showTransition = false) {
     const initialWalls = this.makeEmpty(GRID_W, GRID_H, false);
     
-    // Create border walls
+    // create border walls
     for (let x = 0; x < GRID_W; x++) {
       initialWalls[0][x] = initialWalls[GRID_H - 1][x] = true;
     }
@@ -447,7 +449,7 @@ export class PacxonGame {
       initialWalls[y][0] = initialWalls[y][GRID_W - 1] = true;
     }
     
-    // Calculate speed multiplier based on current level
+    // calculate speed multiplier based on current level
     const speedMultiplier = 1 + (this.currentLevel - 1) * 0.15; // 15% faster each level
     
     return {
@@ -468,19 +470,19 @@ export class PacxonGame {
   }
 
   setupInputHandlers() {
-    // For browser environment only
+    // for browser environment only
     if (typeof document !== 'undefined') {
       document.addEventListener('keydown', (e) => {
         const key = e.key.toLowerCase();
         this.keys.add(key);
         
-        // Handle name entry screen
+        // handle name entry screen
         if (this.gameState.scene === 'NAME_ENTRY') {
           this.handleNameEntryInput(key);
           return;
         }
         
-        // Start game from title screen on any key press
+        // start game from title screen on any key press
         if (this.gameState.scene === 'TITLE') {
           this.startGame();
           return;
@@ -500,14 +502,11 @@ export class PacxonGame {
   }
 
   setupGamepadSupport() {
-    // For browser environment only
+    // for browser environment only
     if (typeof window !== 'undefined') {
-      // Listen for gamepad connection
+      // listen for gamepad connection
       window.addEventListener('gamepadconnected', (e) => {
         console.log('🎮 Gamepad connected:', e.gamepad.id);
-        console.log('   Buttons:', e.gamepad.buttons.length);
-        console.log('   Axes:', e.gamepad.axes.length);
-        console.log('💡 Press any button to see which button numbers are detected');
       });
 
       window.addEventListener('gamepaddisconnected', (e) => {
@@ -517,7 +516,7 @@ export class PacxonGame {
   }
 
   pollGamepad() {
-    // Only poll if in browser environment
+    // only poll if in browser environment
     if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
 
     const gamepads = navigator.getGamepads();
@@ -530,7 +529,7 @@ export class PacxonGame {
       const stateKey = `gamepad${i}`;
       const lastState = this.lastGamepadState[stateKey] || {};
 
-      // Debug: Log all button presses to help identify button mapping
+      // debug: Log all button presses to help identify button mapping
       if (!lastState.debugLogged) {
         gamepad.buttons.forEach((button, index) => {
           if (button.pressed && !lastState[`btn${index}`]) {
@@ -718,7 +717,8 @@ export class PacxonGame {
     }, 2500);
   }
 
-  // Helper functions
+  // helper functions
+  // this math rocks!!
   inBounds(x, y) { 
     return x >= 0 && y >= 0 && x < GRID_W && y < GRID_H; 
   }

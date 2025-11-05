@@ -2,19 +2,17 @@ import express from "express";
 import { FlipDotPrototypeRenderer } from "./prototype-renderer.js";
 
 const app = express();
-const PORT = 3001; // Different port from the original preview
+const PORT = 3001;
 
-// Serve static files (images) from the images directory
+// for serving static images
 app.use('/images', express.static('images'));
-// Serve static files (audio) from the audio directory
 app.use('/audio', express.static('audio'));
 
+// global references
 let prototypeRenderer = null;
-
-// Global reference to the game instance
 let gameInstance = null;
 
-// Track previous game state to detect changes
+// track game state
 let previousGameState = {
   scene: null,
   lives: null,
@@ -22,12 +20,12 @@ let previousGameState = {
   playerY: null,
 };
 
-// Function to set the game instance
+// set game
 export function setGameInstance(game) {
   gameInstance = game;
 }
 
-// Serve the prototype view
+// the preview look and feel
 app.get("/", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -221,7 +219,7 @@ app.get("/", (req, res) => {
       <audio id="audioIntermission" src="/audio/pacman_intermission.wav" preload="auto"></audio>
       
       <script>
-        // Audio elements
+        // audio elements
         const audioElements = {
           'pacman_beginning.wav': document.getElementById('audioBeginning'),
           'pacman_chomp.wav': document.getElementById('audioChomp'),
@@ -229,22 +227,22 @@ app.get("/", (req, res) => {
           'pacman_intermission.wav': document.getElementById('audioIntermission')
         };
 
-        // Track currently playing sounds to avoid overlaps
+        // track currently playing sounds to avoid overlaps
         let lastSoundTime = {};
         
-        // Function to play sound
+        // function to play sound
         function playSound(soundName) {
           const audio = audioElements[soundName];
           if (!audio) return;
           
-          // Special handling for chomp sound - don't restart if still playing
+          // special handling for chomp sound - don't restart if still playing
           if (soundName === 'pacman_chomp.wav') {
             // Don't play if currently playing
             if (!audio.paused && audio.currentTime > 0 && audio.currentTime < audio.duration) {
               return; // Still playing, skip
             }
             
-            // Additional debounce - wait at least 150ms after it finishes
+            // additional debounce - wait at least 150ms after it finishes
             const now = Date.now();
             if (lastSoundTime[soundName] && now - lastSoundTime[soundName] < 150) {
               return;
@@ -252,13 +250,11 @@ app.get("/", (req, res) => {
             lastSoundTime[soundName] = now;
           }
           
-          // Stop and reset audio for non-looping sounds
+          // stop and reset audio for non-looping sounds
           audio.pause();
           audio.currentTime = 0;
           audio.play().catch(e => console.log('Audio play failed:', e));
         }
-
-        // Check for sound events every 100ms
         setInterval(() => {
           fetch('/sound-event')
             .then(response => response.json())
@@ -276,7 +272,7 @@ app.get("/", (req, res) => {
           img.src = '/frame?' + new Date().getTime();
         }, 100);
         
-        // Update game status every 500ms
+        // update game status every 500ms
         setInterval(() => {
           fetch('/status')
             .then(response => response.text())
@@ -288,7 +284,7 @@ app.get("/", (req, res) => {
             });
         }, 500);
         
-        // Send commands to the game
+        // send commands to the game
         function sendCommand(command) {
           fetch('/command', {
             method: 'POST',
@@ -299,7 +295,7 @@ app.get("/", (req, res) => {
           }).catch(console.error);
         }
         
-        // Keyboard controls
+        // keyboard controls
         document.addEventListener('keydown', (e) => {
           switch(e.key.toLowerCase()) {
             case 'arrowup':
@@ -328,8 +324,6 @@ app.get("/", (req, res) => {
               break;
           }
         });
-        
-        // Focus the document to ensure keyboard events work
         document.addEventListener('DOMContentLoaded', () => {
           document.body.tabIndex = 0;
           document.body.focus();
@@ -340,10 +334,10 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Serve the current prototype frame
+// serve the current prototype as a frame
 app.get("/frame", (req, res) => {
   if (!prototypeRenderer) {
-    // Create a default renderer if none exists
+    // create a default renderer if none exists
     prototypeRenderer = new FlipDotPrototypeRenderer(84, 28);
     prototypeRenderer.renderTestPattern();
   }
@@ -358,7 +352,7 @@ app.get("/frame", (req, res) => {
   res.send(prototypeRenderer.getBuffer());
 });
 
-// Handle game commands
+// handle game commands
 app.use(express.json());
 app.post("/command", (req, res) => {
   if (!gameInstance) {
@@ -390,7 +384,7 @@ app.post("/command", (req, res) => {
   res.json({ success: true });
 });
 
-// Get game status
+// get game status
 app.get("/status", (req, res) => {
   if (!gameInstance) {
     return res.send("Game not initialized");
@@ -400,7 +394,7 @@ app.get("/status", (req, res) => {
   res.send(status || "Game running...");
 });
 
-// Get sound events based on game state changes
+// get sound events based on game state changes
 app.get("/sound-event", (req, res) => {
   if (!gameInstance) {
     return res.json({ sound: null });
@@ -409,7 +403,7 @@ app.get("/sound-event", (req, res) => {
   const currentState = gameInstance.gameState;
   let soundToPlay = null;
 
-  // Check for scene changes
+  // check for scene changes
   if (currentState.scene !== previousGameState.scene) {
     if (currentState.scene === 'TITLE') {
       soundToPlay = 'pacman_beginning.wav';
@@ -417,7 +411,7 @@ app.get("/sound-event", (req, res) => {
     previousGameState.scene = currentState.scene;
   }
 
-  // Check if showing high scores (separate from scene change)
+  // check if showing high scores (separate from scene change)
   if (currentState.scene === 'NAME_ENTRY' && 
       gameInstance.nameEntry.showingScores && 
       !previousGameState.showingScores) {
@@ -425,7 +419,7 @@ app.get("/sound-event", (req, res) => {
   }
   previousGameState.showingScores = gameInstance.nameEntry.showingScores;
 
-  // Check for life lost (death sound)
+  // check for life lost (death sound)
   if (currentState.lives !== null && 
       previousGameState.lives !== null && 
       currentState.lives < previousGameState.lives) {
@@ -433,7 +427,7 @@ app.get("/sound-event", (req, res) => {
   }
   previousGameState.lives = currentState.lives;
 
-  // Check for player movement (chomp sound)
+  // check for player movement (chomp sound)
   if (currentState.scene === 'PLAYING' && currentState.playing) {
     const playerX = currentState.player.x;
     const playerY = currentState.player.y;
@@ -450,12 +444,12 @@ app.get("/sound-event", (req, res) => {
   res.json({ sound: soundToPlay });
 });
 
-// Function to update the prototype renderer from external source
+// function to update the prototype renderer from external source
 export function updatePrototypeRenderer(renderer) {
   prototypeRenderer = renderer;
 }
 
-// Start the server
+// start the server
 app.listen(PORT, () => {
   console.log(`FlipDot Prototype server running at http://localhost:${PORT}`);
 });

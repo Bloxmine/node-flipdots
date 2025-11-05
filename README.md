@@ -1,4 +1,4 @@
-# Node Flipdots
+# Node Flipdots - Pac Xon Edition
 
 A Node.js project for controlling and simulating flipdot displays, perfect for educational purposes and creative coding exercises.
 
