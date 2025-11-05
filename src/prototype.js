@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { FPS, LAYOUT } from "./settings.js";
 import { FlipDotPrototypeRenderer } from "./prototype-renderer.js";
-import { updatePrototypeRenderer, setGameInstance } from "./prototype-preview.js";
+import { updatePixelData, setGameInstance } from "./prototype-preview.js";
 
 // Pacxon game imports
 import { PacxonGame } from "./pacxon-flipdot.js";
@@ -47,7 +47,7 @@ ctx.textBaseline = "top";
 
 // Create the prototype renderer
 const prototypeRenderer = new FlipDotPrototypeRenderer(width, height, 8, 2);
-updatePrototypeRenderer(prototypeRenderer);
+// updatePrototypeRenderer(prototypeRenderer);
 
 // Initialize the Pacxon game without auto-play
 const pacxonGame = new PacxonGame(width, height, false);
@@ -155,32 +155,15 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 	// Render the Pacxon game
 	pacxonGame.render(ctx);
 
-	// Convert image to binary (purely black and white) for flipdot display
-	{
-		const imageData = ctx.getImageData(0, 0, width, height);
-		const data = imageData.data;
-		for (let i = 0; i < data.length; i += 4) {
-			// Apply thresholding - any pixel above 127 brightness becomes white (255), otherwise black (0)
-			const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-			const binary = brightness > 127 ? 255 : 0;
-			data[i] = binary; // R
-			data[i + 1] = binary; // G
-			data[i + 2] = binary; // B
-			data[i + 3] = 255; // The board is not transparent :-)
-		}
-		ctx.putImageData(imageData, 0, 0);
-	}
+	// Get pixel data from the game canvas
+	const pixelData = prototypeRenderer.getPixelDataFromCanvas(canvas);
 
-	// Update the prototype renderer
-	prototypeRenderer.renderFromCanvas(canvas);
+	// Send pixel data to the prototype preview
+	updatePixelData(pixelData);
 
 	if (IS_DEV) {
-		// Save both the original canvas and prototype
-		const filename = path.join(outputDir, "frame.png");
-		const buffer = canvas.toBuffer("image/png");
-		fs.writeFileSync(filename, buffer);
-		
-		// Save prototype version
-		prototypeRenderer.savePrototype("prototype-frame.png");
+		// Optionally, save the prototype frame for debugging
+		// prototypeRenderer.renderFromPixelArray(pixelData);
+		// prototypeRenderer.savePrototype("prototype-frame.png");
 	}
 });

@@ -262,7 +262,7 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 	
 	if (IS_DEV) {
 		// Send frame directly to browser via WebSocket
-		sendFrame(imageData);
+		sendFrame(imageData.data, imageData.width, imageData.height);
 		
 		// Optionally still save PNG for debugging (can be removed for even better performance)
 		// const filename = path.join(outputDir, "frame.png");

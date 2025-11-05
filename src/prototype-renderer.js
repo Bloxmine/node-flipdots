@@ -53,26 +53,28 @@ export class FlipDotPrototypeRenderer {
     }
   }
   
-  // render from source canvas (like the game canvas)
-  renderFromCanvas(sourceCanvas) {
-    // clear the prototype canvas with dark background
+  // Render from source canvas and get raw pixel data for the prototype
+  getPixelDataFromCanvas(sourceCanvas) {
+    const sourceCtx = sourceCanvas.getContext("2d");
+    const imageData = sourceCtx.getImageData(0, 0, this.gridWidth, this.gridHeight);
+    return imageData.data;
+  }
+
+  // render from a raw pixel array (R, G, B, A)
+  renderFromPixelArray(pixelArray) {
+    // Clear the prototype canvas with dark background
     this.ctx.fillStyle = "#0a0a0a";
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
     
-    // get image data from source canvas
-    const sourceCtx = sourceCanvas.getContext("2d");
-    const imageData = sourceCtx.getImageData(0, 0, this.gridWidth, this.gridHeight);
-    const data = imageData.data;
-    // this is heavy crap.
-    // render each pixel as a dot
+    // Render each pixel as a dot
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
         const pixelIndex = (y * this.gridWidth + x) * 4;
         
-        // check if pixel is bright (should be "on")
-        const r = data[pixelIndex];
-        const g = data[pixelIndex + 1];
-        const b = data[pixelIndex + 2];
+        // Check if pixel is bright (should be "on")
+        const r = pixelArray[pixelIndex];
+        const g = pixelArray[pixelIndex + 1];
+        const b = pixelArray[pixelIndex + 2];
         const brightness = (r + g + b) / 3;
         
         const isOn = brightness > 127;
@@ -80,7 +82,7 @@ export class FlipDotPrototypeRenderer {
       }
     }
   }
-  // this needs to be improved.
+  
   // render from image data directly
   renderFromImageData(imageData) {
     // Clear the prototype canvas with dark background

@@ -9,7 +9,8 @@ app.use('/images', express.static('images'));
 app.use('/audio', express.static('audio'));
 
 // global references
-let prototypeRenderer = null;
+let currentPixelData = null;
+let previousPixelData = null;
 let gameInstance = null;
 
 // track game state
@@ -23,6 +24,41 @@ let previousGameState = {
 // set game
 export function setGameInstance(game) {
   gameInstance = game;
+}
+
+// update pixel data - now expects RGBA pixel data and converts to binary + diffs
+export function updatePixelData(pixelData) {
+  // Convert RGBA pixel data to binary (0 or 1) for each dot
+  const gridWidth = 84;
+  const gridHeight = 28;
+  const binaryData = new Uint8Array(gridWidth * gridHeight);
+  
+  for (let i = 0; i < gridWidth * gridHeight; i++) {
+    const pixelIndex = i * 4;
+    const brightness = (pixelData[pixelIndex] + pixelData[pixelIndex + 1] + pixelData[pixelIndex + 2]) / 3;
+    binaryData[i] = brightness > 127 ? 1 : 0;
+  }
+  
+  // If we have previous data, calculate the diff
+  if (previousPixelData) {
+    const changes = [];
+    for (let i = 0; i < binaryData.length; i++) {
+      if (binaryData[i] !== previousPixelData[i]) {
+        changes.push(i); // Store the index of changed dots
+      }
+    }
+    
+    // Only store current data if there are changes
+    if (changes.length > 0) {
+      currentPixelData = { data: binaryData, changes };
+      previousPixelData = new Uint8Array(binaryData); // Copy for next comparison
+    }
+  } else {
+    // First frame - send all dots
+    const allIndices = Array.from({ length: binaryData.length }, (_, i) => i);
+    currentPixelData = { data: binaryData, changes: allIndices };
+    previousPixelData = new Uint8Array(binaryData);
+  }
 }
 
 // the preview look and feel
@@ -186,7 +222,7 @@ app.get("/", (req, res) => {
       </div>
       
       <div class="display-container">
-        <img id="prototypeDisplay" src="/frame" alt="FlipDot Prototype">
+        <canvas id="prototypeDisplay" width="840" height="280"></canvas>
       </div>
       
       <div class="game-controls">
@@ -266,11 +302,106 @@ app.get("/", (req, res) => {
             .catch(() => {});
         }, 100);
         
-        // Auto-refresh the image every 100ms
-        setInterval(() => {
-          const img = document.getElementById('prototypeDisplay');
-          img.src = '/frame?' + new Date().getTime();
-        }, 100);
+        // Auto-refresh the canvas every 100ms
+        const canvas = document.getElementById('prototypeDisplay');
+        const ctx = canvas.getContext('2d');
+        const dotSize = 8;
+        const dotSpacing = 2;
+        const gridWidth = 84;
+        const gridHeight = 28;
+        let previousPixelData = null;
+
+        // --- Create Dot Sprites ---
+        const dotDiameter = dotSize + dotSpacing;
+        const onDotCanvas = document.createElement('canvas');
+        onDotCanvas.width = onDotCanvas.height = dotDiameter;
+        const onCtx = onDotCanvas.getContext('2d');
+
+        const offDotCanvas = document.createElement('canvas');
+        offDotCanvas.width = offDotCanvas.height = dotDiameter;
+        const offCtx = offDotCanvas.getContext('2d');
+
+        function createDotSprites() {
+          const radius = dotSize / 2;
+          const center = dotDiameter / 2;
+
+          // Draw "On" dot
+          onCtx.fillStyle = '#0a0a0a';
+          onCtx.fillRect(0, 0, dotDiameter, dotDiameter);
+          onCtx.beginPath();
+          onCtx.arc(center, center, radius, 0, Math.PI * 2);
+          onCtx.fillStyle = "#f0f0f0";
+          onCtx.fill();
+          onCtx.strokeStyle = "#d0d0d0";
+          onCtx.lineWidth = 1;
+          onCtx.stroke();
+
+          // Draw "Off" dot
+          offCtx.fillStyle = '#0a0a0a';
+          offCtx.fillRect(0, 0, dotDiameter, dotDiameter);
+          offCtx.beginPath();
+          offCtx.arc(center, center, radius, 0, Math.PI * 2);
+          offCtx.fillStyle = "#1a1a1a";
+          offCtx.fill();
+        }
+
+        createDotSprites();
+        // --- End of Sprite Creation ---
+
+        // Track full state on client side
+        let clientState = new Uint8Array(gridWidth * gridHeight);
+        let isFirstFrame = true;
+
+        function renderChangedDots(changes, data) {
+          // Clear canvas only on first frame
+          if (isFirstFrame) {
+            ctx.fillStyle = "#0a0a0a";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            isFirstFrame = false;
+          }
+
+          // Only render the dots that changed
+          for (let i = 0; i < changes.length; i++) {
+            const dotIndex = changes[i];
+            const isOn = data[i] === 1;
+            
+            // Update client state
+            clientState[dotIndex] = data[i];
+            
+            // Calculate position
+            const x = dotIndex % gridWidth;
+            const y = Math.floor(dotIndex / gridWidth);
+            
+            const sprite = isOn ? onDotCanvas : offDotCanvas;
+            const destX = x * dotDiameter;
+            const destY = y * dotDiameter;
+            ctx.drawImage(sprite, destX, destY);
+          }
+        }
+
+        let lastFetchTime = 0;
+        const FETCH_INTERVAL = 100; // ms
+
+        function fetchAndRender() {
+          const now = Date.now();
+          if (now - lastFetchTime >= FETCH_INTERVAL) {
+            lastFetchTime = now;
+            
+            fetch('/frame')
+              .then(response => response.json())
+              .then(frameData => {
+                if (frameData.changes && frameData.changes.length > 0) {
+                  renderChangedDots(frameData.changes, frameData.data);
+                }
+              })
+              .catch(err => console.error('Frame fetch error:', err));
+          }
+          
+          requestAnimationFrame(fetchAndRender);
+        }
+
+        // Start the render loop
+        requestAnimationFrame(fetchAndRender);
         
         // update game status every 500ms
         setInterval(() => {
@@ -334,22 +465,28 @@ app.get("/", (req, res) => {
   `);
 });
 
-// serve the current prototype as a frame
+// serve the current prototype as a frame (optimized: only changed dots)
 app.get("/frame", (req, res) => {
-  if (!prototypeRenderer) {
-    // create a default renderer if none exists
-    prototypeRenderer = new FlipDotPrototypeRenderer(84, 28);
-    prototypeRenderer.renderTestPattern();
+  if (!currentPixelData) {
+    // Create a default blank frame if no data exists
+    res.json({ changes: [], data: [] });
+    return;
   }
   
   res.set({
-    'Content-Type': 'image/png',
+    'Content-Type': 'application/json',
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0'
   });
   
-  res.send(prototypeRenderer.getBuffer());
+  // Send only the indices that changed and their new values
+  const response = {
+    changes: currentPixelData.changes,
+    data: currentPixelData.changes.map(idx => currentPixelData.data[idx])
+  };
+  
+  res.json(response);
 });
 
 // handle game commands
