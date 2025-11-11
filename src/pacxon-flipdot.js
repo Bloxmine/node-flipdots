@@ -401,6 +401,123 @@ const lettersBig = {
     ]
 };
 
+// animated pacman pixel art when idle
+// 14x14 pixel art frames
+const animationFrames = {
+    "pacmanmouthopenToRight": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,0,0,0,0],
+        [1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+        [1,1,1,1,1,1,0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,0,0,0,0,0,0,0,0],
+        [1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+        [0,1,1,1,1,1,1,1,1,1,0,0,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+    ],
+      "pacmanmouthopenToLeft": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0,1,1,1,1,1,1],
+        [0,0,0,0,0,0,1,1,1,1,1,1,1,1],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+    ],
+    "pacmanfilled": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+    ],
+    "ghost1": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,0,0,1,1,1,1,0,0,1,1,0],
+        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
+        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
+        [1,1,0,1,1,0,1,1,0,1,1,0,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,0,1,1,1,1,1,1,0,1,1,1],
+        [0,1,0,0,0,1,1,1,1,0,0,0,1,0],
+    ],
+    "ghost2": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,0,0,1,1,1,1,0,0,1,1,0],
+        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
+        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
+        [1,1,0,1,1,0,1,1,0,1,1,0,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,0,1,1,1,0,0,1,1,1,0,1,1],
+        [1,0,0,0,1,1,0,0,1,1,0,0,0,1],
+    ],
+    "ghostafraid2": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+        [1,0,1,1,0,0,1,1,0,0,1,1,0,1],
+        [1,1,0,1,1,1,0,0,1,1,1,0,1,1],
+        [1,0,0,0,1,1,0,0,1,1,0,0,0,1],
+    ],
+    "ghostafraid1": [
+        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,1,0,0,1,1,0,0,1,1,0,0,1,1],
+        [1,0,1,1,0,0,1,1,0,0,1,1,0,1],
+        [1,1,1,1,0,1,1,1,1,0,1,1,1,1],
+        [0,1,1,0,0,0,1,1,0,0,0,1,1,0],
+    ]
+};
+
 export class PacxonGame {
   constructor(width, height, autoPlay = false) {
     this.width = width;
@@ -416,6 +533,16 @@ export class PacxonGame {
     this.currentLevel = 1;
     this.baseSpeed = 0.4;
     this.transitionStartTime = 0;
+
+    // Idle animation state for title screen
+    this.idleAnimation = {
+      phase: 'waiting',  // 'waiting', 'chase' or 'flee'
+      pacmanX: -16,      // Start off-screen left
+      ghostX: -40,       // Ghost starts with gap (24 pixels behind)
+      frame: 0,
+      lastFrameTime: 0,
+      waitStartTime: Date.now() // Track when we entered title screen
+    };
 
     // high score name entry state, three letters
     this.nameEntry = {
@@ -450,7 +577,33 @@ export class PacxonGame {
     }
     
     // calculate speed multiplier based on current level
-    const speedMultiplier = 1 + (this.currentLevel - 1) * 0.15; // 15% faster each level
+    const speedMultiplier = 1 + (this.currentLevel - 1) * 0.05; // 5% faster each level
+    
+    // Determine number of enemies based on level
+    let numEnemies = 2; // Start with 2 enemies
+    if (this.currentLevel >= 7) numEnemies = 5;
+    else if (this.currentLevel >= 5) numEnemies = 4;
+    else if (this.currentLevel >= 3) numEnemies = 3;
+    
+    // Create enemies with varied starting positions and velocities
+    const enemies = [];
+    const enemyConfigs = [
+      { x: GRID_W / 2, y: GRID_H / 2, vx: 0.5, vy: 0.37 },
+      { x: GRID_W / 3, y: GRID_H / 3, vx: -0.4, vy: 0.45 },
+      { x: GRID_W * 2 / 3, y: GRID_H / 2, vx: 0.45, vy: -0.42 },
+      { x: GRID_W / 2, y: GRID_H * 2 / 3, vx: -0.38, vy: 0.48 },
+      { x: GRID_W * 2 / 3, y: GRID_H * 2 / 3, vx: 0.42, vy: 0.4 }
+    ];
+    
+    for (let i = 0; i < numEnemies; i++) {
+      const config = enemyConfigs[i];
+      enemies.push({
+        x: config.x,
+        y: config.y,
+        vx: config.vx * speedMultiplier,
+        vy: config.vy * speedMultiplier
+      });
+    }
     
     return {
       scene: showTransition ? 'LEVEL_TRANSITION' : (keepScore ? 'PLAYING' : 'TITLE'),
@@ -463,10 +616,7 @@ export class PacxonGame {
       player: { x: 1, y: 1 },
       trail: new Set(),
       walls: initialWalls,
-      enemies: [
-        { x: GRID_W / 2, y: GRID_H / 2, vx: 0.5 * speedMultiplier, vy: 0.37 * speedMultiplier },
-        { x: GRID_W / 3, y: GRID_H / 3, vx: -0.4 * speedMultiplier, vy: 0.45 * speedMultiplier }
-      ],
+      enemies: enemies,
     };
   }
 
@@ -684,6 +834,12 @@ export class PacxonGame {
     this.gameState = this.getInitialState();
     this.dir = null;
     this.tick = 0;
+    
+    // Reset idle animation to waiting phase
+    this.idleAnimation.phase = 'waiting';
+    this.idleAnimation.waitStartTime = Date.now();
+    this.idleAnimation.pacmanX = -16;
+    this.idleAnimation.ghostX = -40;
   }
 
   nextLevel() {
@@ -851,6 +1007,54 @@ export class PacxonGame {
     }
   }
 
+  updateIdleAnimation() {
+    const speed = 1.5; // pixels per frame
+    const now = Date.now();
+    
+    // Check if we're in waiting phase (5 second delay)
+    if (this.idleAnimation.phase === 'waiting') {
+      if (now - this.idleAnimation.waitStartTime >= 5000) {
+        // Start the chase phase after 5 seconds
+        this.idleAnimation.phase = 'chase';
+        this.idleAnimation.pacmanX = -16;
+        this.idleAnimation.ghostX = -40; // Ghost 24 pixels ahead
+      }
+      return; // Don't animate during waiting
+    }
+    
+    // Animate sprite frame every 150ms
+    if (now - this.idleAnimation.lastFrameTime > 150) {
+      this.idleAnimation.frame = (this.idleAnimation.frame + 1) % 2;
+      this.idleAnimation.lastFrameTime = now;
+    }
+    
+    if (this.idleAnimation.phase === 'chase') {
+      // Pacman chases ghost from left to right
+      this.idleAnimation.pacmanX += speed;
+      this.idleAnimation.ghostX += speed;
+      
+      // When pacman goes off screen on right, switch to flee phase
+      if (this.idleAnimation.pacmanX > this.width + 16) {
+        this.idleAnimation.phase = 'flee';
+        // Ghost on left, pacman on right (ghost flees from pacman)
+        this.idleAnimation.ghostX = this.width + 16;
+        this.idleAnimation.pacmanX = this.width + 40; // Pacman 24 pixels behind
+      }
+    } else if (this.idleAnimation.phase === 'flee') {
+      // Afraid ghost flees from pacman, right to left
+      this.idleAnimation.pacmanX -= speed;
+      this.idleAnimation.ghostX -= speed;
+      
+      // When ghost goes off screen on left, restart waiting phase
+      if (this.idleAnimation.ghostX < -16) {
+        this.idleAnimation.phase = 'waiting';
+        this.idleAnimation.waitStartTime = now;
+        this.idleAnimation.pacmanX = -16;
+        this.idleAnimation.ghostX = -40;
+      }
+    }
+  }
+
   update() {
     this.tick++;
     
@@ -860,6 +1064,11 @@ export class PacxonGame {
     // Update flash state for title screen and level transition (flash every 15 ticks, ~0.25 seconds at 60fps)
     if (this.tick % 15 === 0) {
       this.flashState = !this.flashState;
+    }
+    
+    // Update idle animation on title screen
+    if (this.gameState.scene === 'TITLE') {
+      this.updateIdleAnimation();
     }
     
     // Auto-restart after 10 seconds on high score screen
@@ -1039,6 +1248,25 @@ export class PacxonGame {
     }
   }
 
+  renderSprite(ctx, spriteName, x, y) {
+    const sprite = animationFrames[spriteName];
+    if (!sprite) {
+      console.warn(`Sprite '${spriteName}' not found`);
+      return;
+    }
+    
+    ctx.fillStyle = "#fff";
+    
+    // Draw the sprite pixel by pixel
+    for (let py = 0; py < sprite.length; py++) {
+      for (let px = 0; px < sprite[py].length; px++) {
+        if (sprite[py][px] === 1) {
+          ctx.fillRect(x + px, y + py, 1, 1);
+        }
+      }
+    }
+  }
+
   render(ctx) {
     // Clear canvas
     ctx.fillStyle = "#000";
@@ -1174,6 +1402,32 @@ export class PacxonGame {
         const startY = 18;
         
         this.renderBigText(ctx, "START", startX, startY);
+      }
+      
+      // Render idle animation at the bottom (only if not waiting)
+      if (this.idleAnimation.phase !== 'waiting') {
+        const animY = this.height - 18; // 18 pixels from bottom
+        
+        if (this.idleAnimation.phase === 'chase') {
+          // Pacman chases ghost (left to right)
+          // Draw ghost first (in front)
+          const ghostFrame = this.idleAnimation.frame === 0 ? 'ghost1' : 'ghost2';
+          this.renderSprite(ctx, ghostFrame, Math.round(this.idleAnimation.ghostX), animY);
+          
+          // Draw pacman (behind, chasing)
+          const pacFrame = this.idleAnimation.frame === 0 ? 'pacmanmouthopenToRight' : 'pacmanfilled';
+          this.renderSprite(ctx, pacFrame, Math.round(this.idleAnimation.pacmanX), animY);
+        } else if (this.idleAnimation.phase === 'flee') {
+          // Afraid ghost flees from pacman (right to left)
+          // Ghost is on the left, pacman on the right chasing it
+          // Draw ghost first (in front, fleeing)
+          const ghostFrame = this.idleAnimation.frame === 0 ? 'ghostafraid1' : 'ghostafraid2';
+          this.renderSprite(ctx, ghostFrame, Math.round(this.idleAnimation.ghostX), animY);
+          
+          // Draw pacman (behind, chasing)
+          const pacFrame = this.idleAnimation.frame === 0 ? 'pacmanmouthopenToLeft' : 'pacmanfilled';
+          this.renderSprite(ctx, pacFrame, Math.round(this.idleAnimation.pacmanX), animY);
+        }
       }
       
       return;

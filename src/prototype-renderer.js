@@ -181,8 +181,7 @@ export class FlipDotPrototypeRenderer {
   
   // Initialize canvas with background and all dots off
   initialize() {
-      this.ctx.fillStyle = "#1a1a1a";
-      this.ctx.strokeStyle = "#c0c0c0";
+    this.ctx.fillStyle = "#0a0a0a";
     this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
     
     // Render all dots in "off" state initially
@@ -204,7 +203,11 @@ export class FlipDotPrototypeRenderer {
       for (let x = 0; x < this.gridWidth; x++) {
         const isOn = (x + y) % 2 === 0;
         this.renderDot(x, y, isOn);
+        // Update state tracking
+        const stateIndex = y * this.gridWidth + x;
+        this.previousPixelState[stateIndex] = isOn ? 1 : 0;
       }
     }
+    this.hasChanges = true;
   }
 }

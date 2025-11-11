@@ -18,6 +18,7 @@ let previousGameState = {
   lives: null,
   playerX: null,
   playerY: null,
+  showingScores: false,
 };
 
 // set game
@@ -208,7 +209,15 @@ app.get("/", (req, res) => {
         </div>
         
         <div class="keyboard-hint">
-          You can also use arrow keys or WASD on your keyboard
+          You can also use arrow keys or WASD on your keyboard<br>
+          Debug keys: N (next level) | + (add life) | - (lose life)
+        </div>
+        
+        <h3 style="margin-top: 30px; color: #fa0;">Debug Controls</h3>
+        <div class="action-buttons">
+          <button class="action-btn" onclick="sendCommand('NEXT_LEVEL')">Next Level</button>
+          <button class="action-btn" onclick="sendCommand('ADD_LIFE')" style="background: #363; border-color: #585;">Add Life</button>
+          <button class="action-btn" onclick="sendCommand('LOSE_LIFE')" style="background: #633; border-color: #855;">Lose Life</button>
         </div>
       </div>
       
@@ -217,6 +226,7 @@ app.get("/", (req, res) => {
       <audio id="audioChomp" src="/audio/pacman_chomp.wav" preload="auto"></audio>
       <audio id="audioDeath" src="/audio/pacman_death.wav" preload="auto"></audio>
       <audio id="audioIntermission" src="/audio/pacman_intermission.wav" preload="auto"></audio>
+      <audio id="audioExtrapac" src="/audio/pacman_extrapac.wav" preload="auto"></audio>
       
       <script>
         // Initialize canvas
@@ -224,12 +234,14 @@ app.get("/", (req, res) => {
         const ctx = canvas.getContext('2d');
         let canvasWidth = 0;
         let canvasHeight = 0;
+        let consecutiveErrors = 0;
+        const MAX_CONSECUTIVE_ERRORS = 3;
         
         // Function to update display from raw pixel data
         async function updateDisplay() {
           try {
             const response = await fetch('/frame-raw');
-            if (!response.ok) throw new Error('Failed to fetch frame');
+            if (!response.ok) throw new Error('HTTP ' + response.status);
             
             // Get dimensions from headers
             const width = parseInt(response.headers.get('X-Canvas-Width'));
@@ -250,8 +262,16 @@ app.get("/", (req, res) => {
             // Create ImageData and render to canvas
             const imageData = new ImageData(pixelData, width, height);
             ctx.putImageData(imageData, 0, 0);
+            
+            // Reset error counter on success
+            consecutiveErrors = 0;
           } catch (error) {
-            console.error('Error updating display:', error);
+            consecutiveErrors++;
+            // Only log if we have multiple consecutive errors (likely real issue, not just server restart)
+            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+              console.warn('Multiple consecutive errors updating display:', error.message);
+            }
+            // Don't spam console during server restarts
           }
         }
         
@@ -260,7 +280,8 @@ app.get("/", (req, res) => {
           'pacman_beginning.wav': document.getElementById('audioBeginning'),
           'pacman_chomp.wav': document.getElementById('audioChomp'),
           'pacman_death.wav': document.getElementById('audioDeath'),
-          'pacman_intermission.wav': document.getElementById('audioIntermission')
+          'pacman_intermission.wav': document.getElementById('audioIntermission'),
+          'pacman_extrapac.wav': document.getElementById('audioExtrapac')
         };
 
         // track currently playing sounds to avoid overlaps
@@ -356,6 +377,23 @@ app.get("/", (req, res) => {
               sendCommand('RESTART');
               e.preventDefault();
               break;
+            case 'n':
+              // Debug: Next level
+              sendCommand('NEXT_LEVEL');
+              e.preventDefault();
+              break;
+            case '+':
+            case '=':
+              // Debug: Add life
+              sendCommand('ADD_LIFE');
+              e.preventDefault();
+              break;
+            case '-':
+            case '_':
+              // Debug: Lose life
+              sendCommand('LOSE_LIFE');
+              e.preventDefault();
+              break;
           }
         });
         document.addEventListener('DOMContentLoaded', () => {
@@ -433,6 +471,24 @@ app.post("/command", (req, res) => {
     case 'RESTART':
       gameInstance.restart();
       break;
+    case 'NEXT_LEVEL':
+      // Debug: advance to next level
+      if (gameInstance.nextLevel && typeof gameInstance.nextLevel === 'function') {
+        gameInstance.nextLevel();
+      }
+      break;
+    case 'ADD_LIFE':
+      // Debug: add a life
+      if (gameInstance.gameState && gameInstance.gameState.lives !== undefined) {
+        gameInstance.gameState.lives = Math.min(gameInstance.gameState.lives + 1, 9); // Cap at 9 lives
+      }
+      break;
+    case 'LOSE_LIFE':
+      // Debug: lose a life
+      if (gameInstance.gameState && gameInstance.gameState.lives !== undefined && gameInstance.gameState.lives > 0) {
+        gameInstance.gameState.lives--;
+      }
+      break;
     default:
       return res.status(400).json({ error: "Invalid command" });
   }
@@ -461,8 +517,12 @@ app.get("/sound-event", (req, res) => {
 
   // check for scene changes
   if (currentState.scene !== previousGameState.scene) {
+    console.log(`Scene changed from ${previousGameState.scene} to ${currentState.scene}`);
     if (currentState.scene === 'TITLE') {
       soundToPlay = 'pacman_beginning.wav';
+    } else if (currentState.scene === 'LEVEL_TRANSITION') {
+      console.log('Triggering level transition sound!');
+      soundToPlay = 'pacman_extrapac.wav';
     }
     previousGameState.scene = currentState.scene;
   }
