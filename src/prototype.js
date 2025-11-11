@@ -47,6 +47,7 @@ ctx.textBaseline = "top";
 
 // Create the prototype renderer
 const prototypeRenderer = new FlipDotPrototypeRenderer(width, height, 8, 2);
+prototypeRenderer.initialize(); // Initialize with all dots off
 updatePrototypeRenderer(prototypeRenderer);
 
 // Initialize the Pacxon game without auto-play
@@ -155,32 +156,28 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 	// Render the Pacxon game
 	pacxonGame.render(ctx);
 
-	// Convert image to binary (purely black and white) for flipdot display
-	{
-		const imageData = ctx.getImageData(0, 0, width, height);
+
+	// Get image data and pass directly to prototype renderer
+	// The renderer will handle thresholding during dot rendering
+	const imageData = ctx.getImageData(0, 0, width, height);
+	const changedPixels = prototypeRenderer.renderFromImageData(imageData);
+
+	if (IS_DEV) {
+		// Apply binary thresholding to the source canvas for saved output
 		const data = imageData.data;
 		for (let i = 0; i < data.length; i += 4) {
-			// Apply thresholding - any pixel above 127 brightness becomes white (255), otherwise black (0)
 			const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
 			const binary = brightness > 127 ? 255 : 0;
 			data[i] = binary; // R
 			data[i + 1] = binary; // G
 			data[i + 2] = binary; // B
-			data[i + 3] = 255; // The board is not transparent :-)
+			data[i + 3] = 255; // A
 		}
 		ctx.putImageData(imageData, 0, 0);
-	}
-
-	// Update the prototype renderer
-	prototypeRenderer.renderFromCanvas(canvas);
-
-	if (IS_DEV) {
-		// Save both the original canvas and prototype
+		
+		// Save the game canvas (optional - can be disabled if not needed)
 		const filename = path.join(outputDir, "frame.png");
 		const buffer = canvas.toBuffer("image/png");
 		fs.writeFileSync(filename, buffer);
-		
-		// Save prototype version
-		prototypeRenderer.savePrototype("prototype-frame.png");
 	}
 });

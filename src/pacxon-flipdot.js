@@ -411,12 +411,12 @@ export class PacxonGame {
     this.autoPlay = autoPlay;
     this.lastDirectionChange = 0;
     this.gameEndTime = 0;
-    this.flashState = false; // for flashing START text
-    this.lastGamepadState = {}; // track previous gamepad button states
-    this.currentLevel = 1; // track current level
-    this.baseSpeed = 0.4; // base speed for enemies
-    this.transitionStartTime = 0; // track when level transition started
-    
+    this.flashState = false;
+    this.lastGamepadState = {};
+    this.currentLevel = 1;
+    this.baseSpeed = 0.4;
+    this.transitionStartTime = 0;
+
     // high score name entry state, three letters
     this.nameEntry = {
       name: ['A', 'A', 'A'],
@@ -456,6 +456,7 @@ export class PacxonGame {
       scene: showTransition ? 'LEVEL_TRANSITION' : (keepScore ? 'PLAYING' : 'TITLE'),
       playing: keepScore && !showTransition ? true : false,
       score: keepScore ? this.gameState.score : 0,
+      // lives: 3 lives by default, can be changed here:
       lives: keepScore ? this.gameState.lives : 3,
       gameOver: false,
       win: false,
@@ -506,11 +507,9 @@ export class PacxonGame {
     if (typeof window !== 'undefined') {
       // listen for gamepad connection
       window.addEventListener('gamepadconnected', (e) => {
-        console.log('🎮 Gamepad connected:', e.gamepad.id);
       });
 
       window.addEventListener('gamepaddisconnected', (e) => {
-        console.log('🎮 Gamepad disconnected:', e.gamepad.id);
       });
     }
   }
@@ -528,20 +527,6 @@ export class PacxonGame {
 
       const stateKey = `gamepad${i}`;
       const lastState = this.lastGamepadState[stateKey] || {};
-
-      // debug: Log all button presses to help identify button mapping
-      if (!lastState.debugLogged) {
-        gamepad.buttons.forEach((button, index) => {
-          if (button.pressed && !lastState[`btn${index}`]) {
-            console.log(`🎮 Button ${index} pressed`);
-          }
-        });
-        gamepad.axes.forEach((value, index) => {
-          if (Math.abs(value) > 0.5 && !lastState[`axis${index}`]) {
-            console.log(`🎮 Axis ${index}: ${value.toFixed(2)}`);
-          }
-        });
-      }
 
       // Check multiple possible D-pad mappings:
       // Standard mapping: buttons 12-15
@@ -703,7 +688,7 @@ export class PacxonGame {
 
   nextLevel() {
     this.currentLevel++;
-    this.gameState = this.getInitialState(true, true, true); // Keep score, advance level, show transition
+    this.gameState = this.getInitialState(true, true, true); // keep score, advance level, show transition
     this.transitionStartTime = Date.now();
     this.dir = null;
     this.tick = 0;
@@ -754,9 +739,8 @@ export class PacxonGame {
     return keep;
   }
 
-  // High score management methods
   loadHighScores() {
-    // Only load from file in Node.js environment
+    // only load from file in Node.js environment
     if (typeof fs === 'undefined') {
       return [];
     }
@@ -773,7 +757,7 @@ export class PacxonGame {
   }
 
   saveHighScores() {
-    // Only save to file in Node.js environment
+    // only save to file in Node.js environment
     if (typeof fs === 'undefined') {
       console.log('High scores (browser mode):', this.highScores);
       return;
@@ -795,10 +779,10 @@ export class PacxonGame {
       date: new Date().toISOString()
     });
     
-    // Sort by score descending
+    // sort by score descending
     this.highScores.sort((a, b) => b.score - a.score);
     
-    // Keep only top 10
+    // keep only top 10
     this.highScores = this.highScores.slice(0, 10);
     
     this.saveHighScores();

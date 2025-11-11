@@ -186,7 +186,7 @@ app.get("/", (req, res) => {
       </div>
       
       <div class="display-container">
-        <img id="prototypeDisplay" src="/frame" alt="FlipDot Prototype">
+        <canvas id="prototypeDisplay"></canvas>
       </div>
       
       <div class="game-controls">
@@ -219,6 +219,42 @@ app.get("/", (req, res) => {
       <audio id="audioIntermission" src="/audio/pacman_intermission.wav" preload="auto"></audio>
       
       <script>
+        // Initialize canvas
+        const canvas = document.getElementById('prototypeDisplay');
+        const ctx = canvas.getContext('2d');
+        let canvasWidth = 0;
+        let canvasHeight = 0;
+        
+        // Function to update display from raw pixel data
+        async function updateDisplay() {
+          try {
+            const response = await fetch('/frame-raw');
+            if (!response.ok) throw new Error('Failed to fetch frame');
+            
+            // Get dimensions from headers
+            const width = parseInt(response.headers.get('X-Canvas-Width'));
+            const height = parseInt(response.headers.get('X-Canvas-Height'));
+            
+            // Resize canvas if needed
+            if (canvas.width !== width || canvas.height !== height) {
+              canvas.width = width;
+              canvas.height = height;
+              canvasWidth = width;
+              canvasHeight = height;
+            }
+            
+            // Get raw pixel data
+            const buffer = await response.arrayBuffer();
+            const pixelData = new Uint8ClampedArray(buffer);
+            
+            // Create ImageData and render to canvas
+            const imageData = new ImageData(pixelData, width, height);
+            ctx.putImageData(imageData, 0, 0);
+          } catch (error) {
+            console.error('Error updating display:', error);
+          }
+        }
+        
         // audio elements
         const audioElements = {
           'pacman_beginning.wav': document.getElementById('audioBeginning'),
@@ -266,11 +302,9 @@ app.get("/", (req, res) => {
             .catch(() => {});
         }, 100);
         
-        // Auto-refresh the image every 100ms
-        setInterval(() => {
-          const img = document.getElementById('prototypeDisplay');
-          img.src = '/frame?' + new Date().getTime();
-        }, 100);
+        // Auto-refresh the display every 100ms using raw pixel data
+        updateDisplay(); // Initial render
+        setInterval(updateDisplay, 100);
         
         // update game status every 500ms
         setInterval(() => {
@@ -334,7 +368,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// serve the current prototype as a frame
+// serve the current prototype as a frame (PNG - legacy/fallback)
 app.get("/frame", (req, res) => {
   if (!prototypeRenderer) {
     // create a default renderer if none exists
@@ -350,6 +384,28 @@ app.get("/frame", (req, res) => {
   });
   
   res.send(prototypeRenderer.getBuffer());
+});
+
+// serve raw pixel data (no PNG encoding - much faster!)
+app.get("/frame-raw", (req, res) => {
+  if (!prototypeRenderer) {
+    // create a default renderer if none exists
+    prototypeRenderer = new FlipDotPrototypeRenderer(84, 28);
+    prototypeRenderer.renderTestPattern();
+  }
+  
+  const pixelData = prototypeRenderer.getRawPixelBuffer();
+  
+  res.set({
+    'Content-Type': 'application/octet-stream',
+    'X-Canvas-Width': pixelData.width.toString(),
+    'X-Canvas-Height': pixelData.height.toString(),
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+  
+  res.send(pixelData.buffer);
 });
 
 // handle game commands

@@ -261,15 +261,10 @@ ticker.start(({ deltaTime, elapsedTime }) => {
 	const imageData = ctx.getImageData(0, 0, display.width, display.height);
 	
 	if (IS_DEV) {
-		// Send frame directly to browser via WebSocket
+		// send frame directly to browser via WebSocket
 		sendFrame(imageData);
-		
-		// Optionally still save PNG for debugging (can be removed for even better performance)
-		// const filename = path.join(outputDir, "frame.png");
-		// const buffer = canvas.toBuffer("image/png");
-		// fs.writeFileSync(filename, buffer);
 	} else {
-		// Send to physical flipdot display
+		// send to physical flipdot display
 		display.setImageData(imageData);
 		if (display.isDirty()) {
 			display.flush();

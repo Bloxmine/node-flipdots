@@ -24,3 +24,6 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo 
+
+# High score table
+high-scores.json
