@@ -2,7 +2,7 @@ import express from "express";
 import { FlipDotPrototypeRenderer } from "./prototype-renderer.js";
 
 const app = express();
-const PORT = 3001;
+const PORT = 3005;
 
 // for serving static images
 app.use('/images', express.static('images'));

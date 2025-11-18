@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { characters, lettersBig, animationFrames, pacmanEat, pacmanDead } from './characters.js';
+import { characters, lettersBig, animationFrames, pacmanEat, pacmanDead, titleScreen } from './characters.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -786,7 +786,7 @@ export class PacxonGame {
     }
   }
 
-  renderCustomText(ctx, text, x, y, scale = 1) {
+  renderCustomText(ctx, text, x, y, scale = 1, walls = null) {
     const charW = 5 * scale;
     const charH = 5 * scale;
     const spacing = 1 * scale;
@@ -799,10 +799,21 @@ export class PacxonGame {
       for (let py = 0; py < 5; py++) {
         for (let px = 0; px < 5; px++) {
           if (matrix[py][px]) {
-            ctx.fillStyle = "#fff";
+            const pixelX = Math.floor(currentX + px * scale);
+            const pixelY = Math.floor(y + py * scale);
+            
+            // Check if this pixel is over a filled area (wall)
+            let onFilledArea = false;
+            if (walls && pixelY >= 0 && pixelY < walls.length && 
+                pixelX >= 0 && pixelX < walls[0].length) {
+              onFilledArea = walls[pixelY][pixelX];
+            }
+            
+            // Invert color if over filled area
+            ctx.fillStyle = onFilledArea ? "#000" : "#fff";
             ctx.fillRect(
-              currentX + px * scale, 
-              y + py * scale, 
+              pixelX, 
+              pixelY, 
               scale, 
               scale
             );
@@ -1062,26 +1073,27 @@ export class PacxonGame {
     if (this.gameState.scene === 'TITLE') {
       ctx.fillStyle = "#fff";
       
-      // Only show text when idle animation is waiting (not playing)
+      // Only show alternating logo/START when idle animation is waiting (not playing)
       if (this.idleAnimation.phase === 'waiting') {
-        // Calculate center positions for "PAC XON"
-        // PAC = 5+2+5+2+5 = 19 pixels
-        // space = 4 pixels
-        // XON = 5+2+5+2+5 = 19 pixels
-        // Total = 19 + 4 + 19 = 42 pixels
-        const titleWidth = 42;
-        const titleX = Math.floor((this.width - titleWidth) / 2);
-        const titleY = 6;
-        
-        // Render animated wavy "PAC XON" text
-        this.renderBigText(ctx, "PAC XON", titleX, titleY, true);
-        
-        // Render flashing "START" text
+        // Alternate between showing the logo and "START" text
         if (this.flashState) {
+          // Show the titleScreen image (Pac Xon logo)
+          const titleFrame = titleScreen.frame_1;
+          if (titleFrame) {
+            for (let y = 0; y < titleFrame.length && y < this.height; y++) {
+              for (let x = 0; x < titleFrame[y].length && x < this.width; x++) {
+                if (titleFrame[y][x] === 1) {
+                  ctx.fillRect(x, y, 1, 1);
+                }
+              }
+            }
+          }
+        } else {
+          // Show "START" text centered
           // START = 5+2+5+2+5+2+5+2+5 = 35 pixels
           const startWidth = 35;
           const startX = Math.floor((this.width - startWidth) / 2);
-          const startY = 18;
+          const startY = Math.floor((this.height - 5) / 2); // Center vertically
           
           this.renderBigText(ctx, "START", startX, startY);
         }
@@ -1196,8 +1208,8 @@ export class PacxonGame {
       const livesX = this.width - livesWidth - 1;
       const livesY = 1;
       
-      // Render lives text
-      this.renderCustomText(ctx, livesText, livesX, livesY, livesScale);
+      // Render lives text with inversion if over walls
+      this.renderCustomText(ctx, livesText, livesX, livesY, livesScale, this.gameState.walls);
     }
   }
 
