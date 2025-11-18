@@ -84,12 +84,19 @@ controller.on('restart', () => {
 });
 
 controller.on('buttonPress', (button) => {
-	// Let game handle button press (for name entry, etc.)
+	// Let game handle button press (for name entry, idle animation, etc.)
 	pacxonGame.handleButtonPress(button);
 	
-	// Also handle restart for non-name-entry screens
+	// Handle start/restart for non-name-entry screens
 	if (button === 'A' || button === 'START') {
-		if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
+		if (pacxonGame.gameState.scene === 'TITLE') {
+			// Only start game if idle animation is waiting (not playing)
+			if (pacxonGame.idleAnimation.phase === 'waiting') {
+				pacxonGame.startGame();
+			}
+		} else if (pacxonGame.gameState.scene === 'HOW_TO_PLAY') {
+			pacxonGame.startActualGame();
+		} else if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
 			pacxonGame.restart();
 		}
 	}
@@ -117,12 +124,19 @@ nesController.on('restart', () => {
 });
 
 nesController.on('buttonPress', (button) => {
-	// Let game handle button press (for name entry, etc.)
+	// Let game handle button press (for name entry, idle animation, etc.)
 	pacxonGame.handleButtonPress(button);
 	
-	// Also handle restart for non-name-entry screens
+	// Handle start/restart for non-name-entry screens
 	if (button === 'A' || button === 'START') {
-		if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
+		if (pacxonGame.gameState.scene === 'TITLE') {
+			// Only start game if idle animation is waiting (not playing)
+			if (pacxonGame.idleAnimation.phase === 'waiting') {
+				pacxonGame.startGame();
+			}
+		} else if (pacxonGame.gameState.scene === 'HOW_TO_PLAY') {
+			pacxonGame.startActualGame();
+		} else if (pacxonGame.gameState.scene !== 'NAME_ENTRY') {
 			pacxonGame.restart();
 		}
 	}

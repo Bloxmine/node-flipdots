@@ -6,517 +6,22 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { characters, lettersBig, animationFrames, pacmanEat, pacmanDead } from './characters.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// configuration adapted for flipdot display
+// flipdot sizes
 const GRID_W = 84;
 const GRID_H = 28;
 const WIN_PCT = 80;
 
 // high scores file path
 const HIGH_SCORES_FILE = path.join(__dirname, '..', 'high-scores.json');
-
+// !!
+// NEED TO BE SEPERATED TO THEIR OWN IMPORTS!!
+// !!
 // character font for text rendering
-const characters = {
-  // these smaller numbers are used for the lives display.
-  "0":[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-  "1":[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
-  "2":[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-  "3":[[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]],
-  "4":[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-  "5":[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-  "6":[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-  "7":[[1,1,1],[0,0,1],[0,0,1],[0,1,0],[0,1,0]],
-  "8":[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-  "9":[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
-};
-// these are all the letters in a 5x5 pixel grid.
-// drawn by Hein Dijstelbloem.
-const lettersBig = {
-      "A": [
-        [0,1,1,1,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "B": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "C": [
-        [0,1,1,1,1],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-    ],
-    "D": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "E": [
-        [1,1,1,1,1],
-        [1,0,0,0,0],
-        [1,1,1,1,0],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-    ],
-    "F": [
-        [1,1,1,1,1],
-        [1,0,0,0,0],
-        [1,1,1,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    "G": [
-        [0,1,1,1,1],
-        [1,0,0,0,0],
-        [1,0,0,1,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "H": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "I": [
-        [1,1,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,1,1,1],
-    ],
-    "J": [
-        [0,0,0,0,1],
-        [0,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [0,1,1,1,1],
-    ],
-    "K": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "L": [
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-    ],
-    "M": [
-        [0,1,1,1,1],
-        [1,0,1,0,1],
-        [1,0,1,0,1],
-        [1,0,1,0,1],
-        [1,0,0,0,1],
-    ],
-    "N": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "O": [
-        [0,1,1,1,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,0],
-    ],
-    "P": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    "Q": [
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,0,1,0,1],
-        [1,0,0,1,0],
-        [1,1,1,0,1],
-    ],
-    "R": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "S": [
-        [0,1,1,1,1],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [1,1,1,1,0],
-    ],
-    "T": [
-        [1,1,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-    ],
-    "U": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,0],
-    ],
-    "V": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [0,1,0,1,0],
-        [0,0,1,0,0],
-    ],
-    "W": [
-        [1,0,0,0,1],
-        [1,0,1,0,1],
-        [1,0,1,0,1],
-        [1,0,1,0,1],
-        [1,1,1,1,0],
-    ],
-    "X": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [0,1,1,1,0],
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-    ],
-    "Y": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-    ],
-    "Z": [
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [0,1,1,1,0],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-    ],
-    "?": [
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [0,0,1,1,1],
-        [0,0,0,0,0],
-        [0,0,1,0,0],
-    ],
-    "!": [
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,0,0,0],
-        [0,0,1,0,0],
-    ],
-    "(": [
-        [0,0,0,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,0,1,1],
-    ],
-    ")": [
-        [1,1,0,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,0,0,0],
-    ],
-    "[": [
-        [0,0,1,1,1],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,1,1],
-    ],
-    "]": [
-        [1,1,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,1,0,0],
-    ],
-    "{": [
-        [0,0,1,1,1],
-        [0,0,1,0,0],
-        [0,1,0,0,0],
-        [0,0,1,0,0],
-        [0,0,1,1,1],
-    ],
-    "}": [
-        [1,1,1,0,0],
-        [0,0,1,0,0],
-        [0,0,0,1,0],
-        [0,0,1,0,0],
-        [1,1,1,0,0],
-    ],
-    ",": [
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    ".": [
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    ":": [
-        [1,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    ";": [
-        [1,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [1,0,0,0,0],
-        [1,0,0,0,0],
-    ],
-    " ": [
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-    ],
-    "-": [
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-        [1,1,1,1,1],
-        [0,0,0,0,0],
-        [0,0,0,0,0],
-    ],
-    "^": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [0,0,0,0,1],
-        [1,0,0,0,1],
-        [0,1,1,1,1],
-    ],
-    "~": [
-        [1,0,1,1,1],
-        [1,0,0,0,1],
-        [1,0,1,1,1],
-        [0,0,0,0,0],
-        [1,0,0,1,0],
-    ],
-        "0": [
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,0,1,0,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "1": [
-        [1,1,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-        [1,1,1,1,1],
-    ],
-    "2": [
-        [1,1,1,1,0],
-        [0,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-    ],
-    "3": [
-        [1,1,1,1,0],
-        [0,0,0,0,1],
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "4": [
-        [1,0,0,0,1],
-        [1,0,0,0,1],
-        [0,1,1,1,1],
-        [0,0,0,0,1],
-        [0,0,0,0,1],
-    ],
-    "5": [
-        [1,1,1,1,1],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [1,1,1,1,0],
-    ],
-    "6": [
-        [1,1,1,1,0],
-        [1,0,0,0,0],
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-    ],
-    "7": [
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [0,0,0,1,0],
-        [0,0,1,0,0],
-        [0,0,1,0,0],
-    ],
-    "8": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [1,0,0,0,1],
-        [0,1,1,1,1],
-    ],
-    "9": [
-        [1,1,1,1,0],
-        [1,0,0,0,1],
-        [1,1,1,1,1],
-        [0,0,0,0,1],
-        [1,1,1,1,1],
-    ]
-};
-
-// animated pacman pixel art when idle
-// 14x14 pixel art frames
-const animationFrames = {
-    "pacmanmouthopenToRight": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,0,0,0,0],
-        [1,1,1,1,1,1,1,1,0,0,0,0,0,0],
-        [1,1,1,1,1,1,0,0,0,0,0,0,0,0],
-        [1,1,1,1,1,1,0,0,0,0,0,0,0,0],
-        [1,1,1,1,1,1,1,1,0,0,0,0,0,0],
-        [0,1,1,1,1,1,1,1,1,1,0,0,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-    ],
-      "pacmanmouthopenToLeft": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,0,0,0,1,1,1,1,1,1,1,1,1,0],
-        [0,0,0,0,0,0,1,1,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,1,1,1,1,1,1],
-        [0,0,0,0,0,0,1,1,1,1,1,1,1,1],
-        [0,0,0,0,1,1,1,1,1,1,1,1,1,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-    ],
-    "pacmanfilled": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-    ],
-    "ghost1": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,0,0,1,1,1,1,0,0,1,1,0],
-        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
-        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
-        [1,1,0,1,1,0,1,1,0,1,1,0,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,0,1,1,1,1,1,1,0,1,1,1],
-        [0,1,0,0,0,1,1,1,1,0,0,0,1,0],
-    ],
-    "ghost2": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,0,0,1,1,1,1,0,0,1,1,0],
-        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
-        [1,1,0,0,0,0,1,1,0,0,0,0,1,1],
-        [1,1,0,1,1,0,1,1,0,1,1,0,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,0,1,1,1,0,0,1,1,1,0,1,1],
-        [1,0,0,0,1,1,0,0,1,1,0,0,0,1],
-    ],
-    "ghostafraid2": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
-        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,0,0,1,1,0,0,1,1,0,0,1,1],
-        [1,0,1,1,0,0,1,1,0,0,1,1,0,1],
-        [1,1,0,1,1,1,0,0,1,1,1,0,1,1],
-        [1,0,0,0,1,1,0,0,1,1,0,0,0,1],
-    ],
-    "ghostafraid1": [
-        [0,0,0,0,0,1,1,1,1,0,0,0,0,0],
-        [0,0,0,1,1,1,1,1,1,1,1,0,0,0],
-        [0,0,1,1,1,1,1,1,1,1,1,1,0,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [0,1,1,1,1,1,1,1,1,1,1,1,1,0],
-        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
-        [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,1,0,0,1,1,0,0,1,1,0,0,1,1],
-        [1,0,1,1,0,0,1,1,0,0,1,1,0,1],
-        [1,1,1,1,0,1,1,1,1,0,1,1,1,1],
-        [0,1,1,0,0,0,1,1,0,0,0,1,1,0],
-    ]
-};
 
 export class PacxonGame {
   constructor(width, height, autoPlay = false) {
@@ -534,6 +39,22 @@ export class PacxonGame {
     this.baseSpeed = 0.4;
     this.transitionStartTime = 0;
 
+    // Level transition animation state
+    this.levelAnimation = {
+      active: false,
+      frame: 0,
+      startTime: 0,
+      frameCount: 0,
+    };
+
+    // Death animation state
+    this.deathAnimation = {
+      active: false,
+      frame: 0,
+      startTime: 0,
+      frameCount: 0,
+    };
+
     // Idle animation state for title screen
     this.idleAnimation = {
       phase: 'waiting',  // 'waiting', 'chase' or 'flee'
@@ -542,6 +63,12 @@ export class PacxonGame {
       frame: 0,
       lastFrameTime: 0,
       waitStartTime: Date.now() // Track when we entered title screen
+    };
+
+    // how to play screen state
+    this.howToPlay = {
+      scrollOffset: 0,
+      startTime: 0,
     };
 
     // high score name entry state, three letters
@@ -633,8 +160,23 @@ export class PacxonGame {
           return;
         }
         
+        // handle how to play screen - any key starts the game
+        if (this.gameState.scene === 'HOW_TO_PLAY') {
+          this.startActualGame();
+          return;
+        }
+        
         // start game from title screen on any key press
         if (this.gameState.scene === 'TITLE') {
+          // If idle animation is playing, reset it back to waiting
+          if (this.idleAnimation.phase !== 'waiting') {
+            this.idleAnimation.phase = 'waiting';
+            this.idleAnimation.waitStartTime = Date.now();
+            this.idleAnimation.pacmanX = -16;
+            this.idleAnimation.ghostX = -40;
+            return; // Don't start the game yet
+          }
+          // If already waiting, start the game
           this.startGame();
           return;
         }
@@ -683,13 +225,13 @@ export class PacxonGame {
       // Some USB NES controllers: axes 0-1 or axes 9
       // Alternative: buttons 4-7 (some retro controllers)
       
-      // Check axes first (most common for NES USB adapters)
+      // check axes first (most common for NES USB adapters)
       let dpadUp = false;
       let dpadDown = false;
       let dpadLeft = false;
       let dpadRight = false;
 
-      // Check all possible axis configurations
+      // check all possible axis configurations
       if (gamepad.axes.length >= 2) {
         dpadUp = gamepad.axes[1] < -0.5 || gamepad.axes[7] < -0.5;
         dpadDown = gamepad.axes[1] > 0.5 || gamepad.axes[7] > 0.5;
@@ -697,13 +239,13 @@ export class PacxonGame {
         dpadRight = gamepad.axes[0] > 0.5 || gamepad.axes[6] > 0.5;
       }
 
-      // Also check button-based D-pads (standard mapping and alternatives)
+      // also check button-based D-pads (standard mapping and alternatives)
       dpadUp = dpadUp || gamepad.buttons[12]?.pressed || gamepad.buttons[4]?.pressed;
       dpadDown = dpadDown || gamepad.buttons[13]?.pressed || gamepad.buttons[5]?.pressed;
       dpadLeft = dpadLeft || gamepad.buttons[14]?.pressed || gamepad.buttons[6]?.pressed;
       dpadRight = dpadRight || gamepad.buttons[15]?.pressed || gamepad.buttons[7]?.pressed;
 
-      // Handle name entry screen
+      // handle name entry screen
       if (this.gameState.scene === 'NAME_ENTRY') {
         if (dpadUp && !lastState.dpadUp) {
           this.handleNameEntryInput('arrowup');
@@ -715,7 +257,7 @@ export class PacxonGame {
           this.handleNameEntryInput('arrowright');
         }
         
-        // Check for submit button (Start or A button)
+        // check for submit button (Start or A button)
         const submitPressed = gamepad.buttons[9]?.pressed || // Start
                              gamepad.buttons[0]?.pressed;    // A button
         if (submitPressed && !lastState.submit) {
@@ -730,7 +272,7 @@ export class PacxonGame {
         return;
       }
       
-      // Start game from title screen on any button press or d-pad
+      // start game from title screen on any button press or d-pad
       if (this.gameState.scene === 'TITLE') {
         const anyPressed = dpadUp || dpadDown || dpadLeft || dpadRight || 
                           gamepad.buttons.some(btn => btn?.pressed);
@@ -742,7 +284,7 @@ export class PacxonGame {
         }
       }
 
-      // Handle direction changes (only on new press, not held)
+      // handle direction changes (only on new press, not held)
       if (dpadUp && !lastState.dpadUp) {
         console.log('🎮 D-pad UP');
         this.dir = 'UP';
@@ -768,7 +310,7 @@ export class PacxonGame {
         this.restart();
       }
 
-      // Update last state - track all buttons and axes for debug
+      // update last state - track all buttons and axes for debug
       const newState = {
         dpadUp,
         dpadDown,
@@ -778,7 +320,7 @@ export class PacxonGame {
         debugLogged: true
       };
       
-      // Track individual buttons for debug logging
+      // track individual buttons for debug logging
       gamepad.buttons.forEach((button, index) => {
         newState[`btn${index}`] = button.pressed;
       });
@@ -790,9 +332,9 @@ export class PacxonGame {
     }
   }
 
-  // Method to set direction from external input
+  // method to set direction from external input
   setDirection(direction) {
-    // Handle name entry
+    // handle name entry
     if (this.gameState.scene === 'NAME_ENTRY') {
       if (direction === 'UP') this.handleNameEntryInput('arrowup');
       else if (direction === 'DOWN') this.handleNameEntryInput('arrowdown');
@@ -801,7 +343,7 @@ export class PacxonGame {
       return;
     }
     
-    // Start game from title screen on any direction press
+    // start game from title screen on any direction press
     if (this.gameState.scene === 'TITLE') {
       this.startGame();
       return;
@@ -809,10 +351,26 @@ export class PacxonGame {
     this.dir = direction;
   }
 
-  // Method to handle button presses from external input (controllers)
+  // method to handle button presses from external input (controllers)
   handleButtonPress(button) {
+    // handle button press on how to play screen
+    if (this.gameState.scene === 'HOW_TO_PLAY') {
+      this.startActualGame();
+      return;
+    }
+    
+    // handle button press on title screen during idle animation
+    if (this.gameState.scene === 'TITLE' && this.idleAnimation.phase !== 'waiting') {
+      // reset idle animation back to waiting phase
+      this.idleAnimation.phase = 'waiting';
+      this.idleAnimation.waitStartTime = Date.now();
+      this.idleAnimation.pacmanX = -16;
+      this.idleAnimation.ghostX = -40;
+      return; // don't start the game yet
+    }
+    
     if (this.gameState.scene === 'NAME_ENTRY') {
-      // If showing scores, ignore button presses (will auto-restart after 10 seconds)
+      // if showing scores, ignore button presses (will auto-restart after 10 seconds)
       if (this.nameEntry.showingScores) {
         return;
       }
@@ -825,6 +383,12 @@ export class PacxonGame {
   }
 
   startGame() {
+    this.gameState.scene = 'HOW_TO_PLAY';
+    this.howToPlay.scrollOffset = 0;
+    this.howToPlay.startTime = Date.now();
+  }
+
+  startActualGame() {
     this.gameState.scene = 'PLAYING';
     this.gameState.playing = true;
   }
@@ -835,7 +399,7 @@ export class PacxonGame {
     this.dir = null;
     this.tick = 0;
     
-    // Reset idle animation to waiting phase
+    // reset idle animation to waiting phase
     this.idleAnimation.phase = 'waiting';
     this.idleAnimation.waitStartTime = Date.now();
     this.idleAnimation.pacmanX = -16;
@@ -844,18 +408,43 @@ export class PacxonGame {
 
   nextLevel() {
     this.currentLevel++;
+    let bonusLife = false;
+    if (this.currentLevel % 3 === 1 && this.currentLevel > 1) {
+      // level completed was divisible by 3 (e.g., completing level 3 means we're now on level 4)
+      bonusLife = true;
+    }
+    
+    // Start the eating animation
+    this.levelAnimation.active = true;
+    this.levelAnimation.frame = 0;
+    this.levelAnimation.startTime = Date.now();
+    this.levelAnimation.frameCount = Object.keys(pacmanEat).length;
+    
     this.gameState = this.getInitialState(true, true, true); // keep score, advance level, show transition
+
+    if (bonusLife && this.gameState.lives < 9) { // cap at 9 lives for display reasons
+      this.gameState.lives++;
+    }
+    
     this.transitionStartTime = Date.now();
     this.dir = null;
     this.tick = 0;
     
-    // Start the actual level after 2.5 seconds
+    // First, finish the eating animation
+    const animationDuration = this.levelAnimation.frameCount * 100; // 100ms per frame
+    
     setTimeout(() => {
-      if (this.gameState.scene === 'LEVEL_TRANSITION') {
-        this.gameState.scene = 'PLAYING';
-        this.gameState.playing = true;
-      }
-    }, 2500);
+      // Animation finished, now show "LEVEL X" text
+      this.levelAnimation.active = false;
+      
+      // After showing text for 1.5 seconds, start the actual level
+      setTimeout(() => {
+        if (this.gameState.scene === 'LEVEL_TRANSITION') {
+          this.gameState.scene = 'PLAYING';
+          this.gameState.playing = true;
+        }
+      }, 1500); // Show text for 1.5 seconds
+    }, animationDuration);
   }
 
   // helper functions
@@ -921,7 +510,7 @@ export class PacxonGame {
     
     try {
       fs.writeFileSync(HIGH_SCORES_FILE, JSON.stringify(this.highScores, null, 2));
-      console.log(`✅ High score saved! ${this.highScores[this.highScores.length - 1]?.name}: ${this.highScores[this.highScores.length - 1]?.score}`);
+      console.log(`${this.highScores[this.highScores.length - 1]?.name}: ${this.highScores[this.highScores.length - 1]?.score}`);
     } catch (err) {
       console.error('Error saving high scores:', err);
     }
@@ -1128,14 +717,28 @@ export class PacxonGame {
       
       if (hit) {
         this.gameState.lives--;
+        
+        // Only play death animation when all lives are lost
         if (this.gameState.lives <= 0) {
-          this.gameState.gameOver = true;
-          this.gameState.playing = false;
-          this.gameState.lives = 0;
-          // Show name entry screen with delay to prevent accidental input
-          this.gameState.scene = 'NAME_ENTRY';
-          this.nameEntry.startTime = Date.now();
+          // Start death animation
+          this.deathAnimation.active = true;
+          this.deathAnimation.frame = 0;
+          this.deathAnimation.startTime = Date.now();
+          this.deathAnimation.frameCount = Object.keys(pacmanDead).length;
+          this.gameState.playing = false; // Pause game during animation
+          
+          // Schedule game over after death animation
+          setTimeout(() => {
+            this.deathAnimation.active = false;
+            this.gameState.gameOver = true;
+            this.gameState.playing = false;
+            this.gameState.lives = 0;
+            // Show name entry screen with delay to prevent accidental input
+            this.gameState.scene = 'NAME_ENTRY';
+            this.nameEntry.startTime = Date.now();
+          }, this.deathAnimation.frameCount * 100); // 100ms per frame
         }
+        
         this.gameState.trail = new Set();
         this.gameState.player = { x: 1, y: 1 };
       } else if (onWall && this.gameState.trail.size > 1) {
@@ -1351,28 +954,105 @@ export class PacxonGame {
       return;
     }
 
+    // Render how to play screen
+    if (this.gameState.scene === 'HOW_TO_PLAY') {
+      ctx.fillStyle = "#fff";
+      
+      // The text to display on multiple lines (broken to fit width of 84 pixels)
+      // Each line should be roughly 12 characters or less (12 * 7 = 84 pixels)
+      const textLines = [
+        "FILL UP",
+        "BOXES,",
+        "WATCH OUT",
+        "FOR",
+        "GHOSTS!",
+        "MOVE",
+        "AROUND",
+        "TO DRAW."
+      ];
+      
+      // calculate scroll offset based on time (smooth downward scrolling)
+      const elapsed = Date.now() - this.howToPlay.startTime;
+      const scrollSpeed = 0.007; // pixels per millisecond (slower than horizontal)
+      this.howToPlay.scrollOffset = elapsed * scrollSpeed;
+      
+      // line height: 5 pixels character height + 2 pixels spacing
+      const lineHeight = 7;
+      const totalHeight = textLines.length * lineHeight;
+      
+      // calculate starting Y position (start above screen, scroll down)
+      const startY = this.height - this.howToPlay.scrollOffset;
+      
+      // center each line horizontally
+      const charWidth = 7;
+      
+      // Track if all text has scrolled off the top
+      const lastLineY = startY + ((textLines.length - 1) * lineHeight);
+      
+      // Render each line
+      textLines.forEach((line, index) => {
+        const y = startY + (index * lineHeight);
+        
+        // Only render if within visible area (with small margin)
+        if (y >= -lineHeight && y < this.height + lineHeight) {
+          // Center the line horizontally
+          const lineWidth = line.length * charWidth;
+          const x = Math.floor((this.width - lineWidth) / 2);
+          this.renderBigText(ctx, line, x, Math.round(y), false);
+        }
+      });
+      
+      // Check if all text has scrolled off the top (start game)
+      if (lastLineY < -lineHeight) {
+        this.startActualGame();
+      }
+      
+      return;
+    }
+
     // Render level transition screen
     if (this.gameState.scene === 'LEVEL_TRANSITION') {
-      // Only render if flash state is on
-      if (this.flashState) {
-        ctx.fillStyle = "#fff";
+      // Render eating animation if active
+      if (this.levelAnimation.active) {
+        const now = Date.now();
+        const elapsed = now - this.levelAnimation.startTime;
+        const frameIndex = Math.floor(elapsed / 100) % this.levelAnimation.frameCount;
+        const frameKey = `frame_${frameIndex + 1}`;
+        const frame = pacmanEat[frameKey];
         
-        // Render "LEVEL X" text
-        const levelText = `LEVEL ${this.currentLevel}`;
-        
-        // Calculate width for centering
-        // Rough calculation: each char is ~5-7 pixels wide with 2 spacing
-        // LEVEL = 5+2+5+2+5+2+5+2+5 = 33
-        // space = 4
-        // number can be 1-2 digits, let's estimate based on digits
-        const numDigits = this.currentLevel.toString().length;
-        const numberWidth = numDigits * 7; // ~5 pixels + 2 spacing per digit
-        const textWidth = 33 + 4 + numberWidth;
-        
-        const textX = Math.floor((this.width - textWidth) / 2);
-        const textY = Math.floor((this.height - 5) / 2); // Center vertically (5 is char height)
-        
-        this.renderBigText(ctx, levelText, textX, textY, false);
+        if (frame) {
+          ctx.fillStyle = "#fff";
+          // Render the frame (it's 84x28, same as grid)
+          for (let y = 0; y < frame.length && y < this.height; y++) {
+            for (let x = 0; x < frame[y].length && x < this.width; x++) {
+              if (frame[y][x] === 1) {
+                ctx.fillRect(x, y, 1, 1);
+              }
+            }
+          }
+        }
+      } else {
+        // Only render text if flash state is on and animation is done
+        if (this.flashState) {
+          ctx.fillStyle = "#fff";
+          
+          // Render "LEVEL X" text
+          const levelText = `LEVEL ${this.currentLevel}`;
+          
+          // Calculate width for centering
+          // Rough calculation: each char is ~5-7 pixels wide with 2 spacing
+          // LEVEL = 5+2+5+2+5+2+5+2+5 = 33
+          // space = 4
+          // number can be 1-2 digits, let's estimate based on digits
+          const numDigits = this.currentLevel.toString().length;
+          const numberWidth = numDigits * 7; // ~5 pixels + 2 spacing per digit
+          const textWidth = 33 + 4 + numberWidth;
+          
+          const textX = Math.floor((this.width - textWidth) / 2);
+          const textY = Math.floor((this.height - 5) / 2); // Center vertically (5 is char height)
+          
+          this.renderBigText(ctx, levelText, textX, textY, false);
+        }
       }
       
       return;
@@ -1382,26 +1062,29 @@ export class PacxonGame {
     if (this.gameState.scene === 'TITLE') {
       ctx.fillStyle = "#fff";
       
-      // Calculate center positions for "PAC XON"
-      // PAC = 5+2+5+2+5 = 19 pixels
-      // space = 4 pixels
-      // XON = 5+2+5+2+5 = 19 pixels
-      // Total = 19 + 4 + 19 = 42 pixels
-      const titleWidth = 42;
-      const titleX = Math.floor((this.width - titleWidth) / 2);
-      const titleY = 6;
-      
-      // Render animated wavy "PAC XON" text
-      this.renderBigText(ctx, "PAC XON", titleX, titleY, true);
-      
-      // Render flashing "START" text
-      if (this.flashState) {
-        // START = 5+2+5+2+5+2+5+2+5 = 35 pixels
-        const startWidth = 35;
-        const startX = Math.floor((this.width - startWidth) / 2);
-        const startY = 18;
+      // Only show text when idle animation is waiting (not playing)
+      if (this.idleAnimation.phase === 'waiting') {
+        // Calculate center positions for "PAC XON"
+        // PAC = 5+2+5+2+5 = 19 pixels
+        // space = 4 pixels
+        // XON = 5+2+5+2+5 = 19 pixels
+        // Total = 19 + 4 + 19 = 42 pixels
+        const titleWidth = 42;
+        const titleX = Math.floor((this.width - titleWidth) / 2);
+        const titleY = 6;
         
-        this.renderBigText(ctx, "START", startX, startY);
+        // Render animated wavy "PAC XON" text
+        this.renderBigText(ctx, "PAC XON", titleX, titleY, true);
+        
+        // Render flashing "START" text
+        if (this.flashState) {
+          // START = 5+2+5+2+5+2+5+2+5 = 35 pixels
+          const startWidth = 35;
+          const startX = Math.floor((this.width - startWidth) / 2);
+          const startY = 18;
+          
+          this.renderBigText(ctx, "START", startX, startY);
+        }
       }
       
       // Render idle animation at the bottom (only if not waiting)
@@ -1435,6 +1118,28 @@ export class PacxonGame {
 
     // Always render the game field, even during game over or win states
     if (this.gameState.scene === 'PLAYING') {
+      // If death animation is active, only render the animation (clear everything else)
+      if (this.deathAnimation.active) {
+        const now = Date.now();
+        const elapsed = now - this.deathAnimation.startTime;
+        const frameIndex = Math.floor(elapsed / 100) % this.deathAnimation.frameCount;
+        const frameKey = `frame_${frameIndex + 1}`;
+        const frame = pacmanDead[frameKey];
+        
+        if (frame) {
+          ctx.fillStyle = "#fff";
+          // Render the frame (it's 84x28, same as grid)
+          for (let y = 0; y < frame.length && y < this.height; y++) {
+            for (let x = 0; x < frame[y].length && x < this.width; x++) {
+              if (frame[y][x] === 1) {
+                ctx.fillRect(x, y, 1, 1);
+              }
+            }
+          }
+        }
+        return; // Don't render anything else during death animation
+      }
+      
       ctx.fillStyle = "#fff";
       
       // Draw walls

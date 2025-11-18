@@ -181,10 +181,6 @@ app.get("/", (req, res) => {
     </head>
     <body>
       <h1>FlipDot Prototype Display</h1>
-      <div class="info">
-        Real-time simulation with physical dot representation<br>
-        Dot size: 8px | Grid: 84×28 | Auto-refresh: 100ms
-      </div>
       
       <div class="display-container">
         <canvas id="prototypeDisplay"></canvas>
@@ -193,24 +189,12 @@ app.get("/", (req, res) => {
       <div class="game-controls">
         <h3>Game Controls</h3>
         
-        <div class="direction-pad">
-          <button class="direction-btn up" onclick="sendCommand('UP')">↑</button>
-          <button class="direction-btn down" onclick="sendCommand('DOWN')">↓</button>
-          <button class="direction-btn left" onclick="sendCommand('LEFT')">←</button>
-          <button class="direction-btn right" onclick="sendCommand('RIGHT')">→</button>
-        </div>
-        
         <div class="action-buttons">
           <button class="action-btn restart" onclick="sendCommand('RESTART')">Restart Game</button>
         </div>
         
         <div class="status-display" id="gameStatus">
           Game Status: Loading...
-        </div>
-        
-        <div class="keyboard-hint">
-          You can also use arrow keys or WASD on your keyboard<br>
-          Debug keys: N (next level) | + (add life) | - (lose life)
         </div>
         
         <h3 style="margin-top: 30px; color: #fa0;">Debug Controls</h3>
@@ -227,6 +211,8 @@ app.get("/", (req, res) => {
       <audio id="audioDeath" src="/audio/pacman_death.wav" preload="auto"></audio>
       <audio id="audioIntermission" src="/audio/pacman_intermission.wav" preload="auto"></audio>
       <audio id="audioExtrapac" src="/audio/pacman_extrapac.wav" preload="auto"></audio>
+      <audio id="audioTutorial" src="/audio/pacman_tutorial.mp3" preload="auto"></audio>
+      <audio id="audioGameplay" src="/audio/gameplay.mp3" preload="auto" loop></audio>
       
       <script>
         // Initialize canvas
@@ -281,7 +267,9 @@ app.get("/", (req, res) => {
           'pacman_chomp.wav': document.getElementById('audioChomp'),
           'pacman_death.wav': document.getElementById('audioDeath'),
           'pacman_intermission.wav': document.getElementById('audioIntermission'),
-          'pacman_extrapac.wav': document.getElementById('audioExtrapac')
+          'pacman_extrapac.wav': document.getElementById('audioExtrapac'),
+          'pacman_tutorial.mp3': document.getElementById('audioTutorial'),
+          'gameplay.mp3': document.getElementById('audioGameplay')
         };
 
         // track currently playing sounds to avoid overlaps
@@ -290,7 +278,21 @@ app.get("/", (req, res) => {
         // function to play sound
         function playSound(soundName) {
           const audio = audioElements[soundName];
-          if (!audio) return;
+          if (!audio) {
+            console.log('Audio element not found:', soundName);
+            return;
+          }
+          
+          console.log('Playing sound:', soundName);
+          
+          // special handling for looping background music - don't restart if already playing
+          if (soundName === 'gameplay.mp3' || soundName === 'pacman_tutorial.mp3') {
+            // Don't restart if currently playing
+            if (!audio.paused && audio.currentTime > 0) {
+              console.log('Background music already playing, skipping');
+              return; // Still playing, skip
+            }
+          }
           
           // special handling for chomp sound - don't restart if still playing
           if (soundName === 'pacman_chomp.wav') {
@@ -312,12 +314,27 @@ app.get("/", (req, res) => {
           audio.currentTime = 0;
           audio.play().catch(e => console.log('Audio play failed:', e));
         }
+        
+        // function to stop sound
+        function stopSound(soundName) {
+          const audio = audioElements[soundName];
+          if (!audio) return;
+          
+          console.log('Stopping sound:', soundName);
+          
+          audio.pause();
+          audio.currentTime = 0;
+        }
+        
         setInterval(() => {
           fetch('/sound-event')
             .then(response => response.json())
             .then(data => {
               if (data.sound) {
                 playSound(data.sound);
+              }
+              if (data.stop) {
+                stopSound(data.stop);
               }
             })
             .catch(() => {});
@@ -514,16 +531,34 @@ app.get("/sound-event", (req, res) => {
 
   const currentState = gameInstance.gameState;
   let soundToPlay = null;
+  let soundToStop = null;
 
   // check for scene changes
   if (currentState.scene !== previousGameState.scene) {
-    console.log(`Scene changed from ${previousGameState.scene} to ${currentState.scene}`);
     if (currentState.scene === 'TITLE') {
       soundToPlay = 'pacman_beginning.wav';
+      // Stop gameplay music when returning to title
+      soundToStop = 'gameplay.mp3';
     } else if (currentState.scene === 'LEVEL_TRANSITION') {
-      console.log('Triggering level transition sound!');
       soundToPlay = 'pacman_extrapac.wav';
+      // Keep gameplay music playing during level transition
+    } else if (currentState.scene === 'HOW_TO_PLAY') {
+      soundToPlay = 'pacman_tutorial.mp3';
+      // Stop gameplay music when in tutorial
+      soundToStop = 'gameplay.mp3';
+    } else if (currentState.scene === 'PLAYING') {
+      // Start gameplay music when entering playing state
+      soundToPlay = 'gameplay.mp3';
+    } else if (currentState.scene === 'NAME_ENTRY') {
+      // Stop gameplay music when entering name entry (game over)
+      soundToStop = 'gameplay.mp3';
     }
+    
+    // Stop tutorial music when leaving HOW_TO_PLAY scene (but only if we didn't already set soundToStop)
+    if (previousGameState.scene === 'HOW_TO_PLAY' && currentState.scene !== 'HOW_TO_PLAY' && !soundToStop) {
+      soundToStop = 'pacman_tutorial.mp3';
+    }
+    
     previousGameState.scene = currentState.scene;
   }
 
@@ -550,14 +585,14 @@ app.get("/sound-event", (req, res) => {
     
     if (previousGameState.playerX !== null && 
         (playerX !== previousGameState.playerX || playerY !== previousGameState.playerY)) {
-      soundToPlay = 'pacman_chomp.wav';
+      // soundToPlay = 'pacman_chomp.wav';
     }
     
     previousGameState.playerX = playerX;
     previousGameState.playerY = playerY;
   }
 
-  res.json({ sound: soundToPlay });
+  res.json({ sound: soundToPlay, stop: soundToStop });
 });
 
 // function to update the prototype renderer from external source
