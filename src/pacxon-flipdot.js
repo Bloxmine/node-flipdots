@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { characters, lettersBig, animationFrames, pacmanEat, pacmanDead, titleScreen } from './characters.js';
+import { characters, lettersBig, animationFrames, pacmanEat, pacmanDead, pacmanDead2, pacmanDead3, titleScreen } from './characters.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +53,12 @@ export class PacxonGame {
       frame: 0,
       startTime: 0,
       frameCount: 0,
+      selectedAnimation: null, // Will hold the randomly selected animation
+      speed: 100, // milliseconds per frame (can vary by animation)
     };
+    
+    // Array of available death animations - easily add more here
+    this.deathAnimations = [pacmanDead, pacmanDead2, pacmanDead3];
 
     // Idle animation state for title screen
     this.idleAnimation = {
@@ -720,11 +725,18 @@ export class PacxonGame {
         
         // Only play death animation when all lives are lost
         if (this.gameState.lives <= 0) {
+          // Randomly select a death animation
+          const randomIndex = Math.floor(Math.random() * this.deathAnimations.length);
+          this.deathAnimation.selectedAnimation = this.deathAnimations[randomIndex];
+          
+          // Set speed: slower for pacmanDead2 and pacmanDead3 (indices 1 and 2)
+          this.deathAnimation.speed = (randomIndex === 1 || randomIndex === 2) ? 200 : 100;
+          
           // Start death animation
           this.deathAnimation.active = true;
           this.deathAnimation.frame = 0;
           this.deathAnimation.startTime = Date.now();
-          this.deathAnimation.frameCount = Object.keys(pacmanDead).length;
+          this.deathAnimation.frameCount = Object.keys(this.deathAnimation.selectedAnimation).length;
           this.gameState.playing = false; // Pause game during animation
           
           // Schedule game over after death animation
@@ -736,7 +748,7 @@ export class PacxonGame {
             // Show name entry screen with delay to prevent accidental input
             this.gameState.scene = 'NAME_ENTRY';
             this.nameEntry.startTime = Date.now();
-          }, this.deathAnimation.frameCount * 100); // 100ms per frame
+          }, this.deathAnimation.frameCount * this.deathAnimation.speed);
         }
         
         this.gameState.trail = new Set();
@@ -1134,9 +1146,9 @@ export class PacxonGame {
       if (this.deathAnimation.active) {
         const now = Date.now();
         const elapsed = now - this.deathAnimation.startTime;
-        const frameIndex = Math.floor(elapsed / 100) % this.deathAnimation.frameCount;
+        const frameIndex = Math.floor(elapsed / this.deathAnimation.speed) % this.deathAnimation.frameCount;
         const frameKey = `frame_${frameIndex + 1}`;
-        const frame = pacmanDead[frameKey];
+        const frame = this.deathAnimation.selectedAnimation[frameKey];
         
         if (frame) {
           ctx.fillStyle = "#fff";
