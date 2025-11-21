@@ -1,4 +1,4 @@
-// FlipDot Prototype Renderer - Optimized for differential rendering
+// FlipDot Prototype Renderer
 import { createCanvas } from "canvas";
 import fs from "node:fs";
 import path from "node:path";

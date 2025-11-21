@@ -4,12 +4,7 @@ A Node.js project for controlling and simulating flipdot displays, perfect for e
 
 ## Overview
 
-This project provides a framework for generating animations for flipdot displays, which are electromechanical displays consisting of small discs (dots) that can be flipped to show different colors (typically black or white). The application:
-
-- Creates bitmap graphics on a virtual canvas
-- Processes these graphics for flipdot compatibility
-- Provides a real-time web preview
-- Outputs frames as PNG images
+This game is based on the classic Pacxon Flash game, adapted for flipdot displays. Players control a character to fill areas of the screen while avoiding enemies. The game features real-time score display, lives system, and optimised graphics for flipdot tech.
 
 ## Installation
 
@@ -27,36 +22,20 @@ npm install
 
 This application supports **dual input modes** - both controller and keyboard input work simultaneously:
 
-### 🎮 Controller Support
+### Controller Support
 - **Xbox 360 Controller** (via USB or wireless adapter)
 - **D-pad or Left Analog Stick**: Move character/cursor
 - **A Button or Start**: Restart/action
 - Auto-detection on startup
 - Hot-plug support (connect/disconnect anytime)
 
-### ⌨️ Keyboard Support
-- **Arrow Keys or WASD**: Move character/cursor  
+### Keyboard Support
+- **Arrow Keys**: Move character/cursor  
 - **R**: Restart/action
+- **N**: Next level (for testing)
 - **Ctrl+C**: Exit application
 - Always available as fallback
 - Works simultaneously with controller
-
-### Testing Input
-Test your input setup before running the game:
-
-```bash
-npm run test-input
-```
-
-This will show you:
-- Which controllers are detected
-- Real-time input from both controller and keyboard
-- Connection status updates
-
-### Input Method Status
-The application displays current input status:
-- 🎮 Controller + ⌨️ Keyboard: Both active
-- ⌨️ Keyboard only: Controller not detected/connected
 
 ### Troubleshooting Input
 - **Controller not detected**: Check `/dev/input/js*` device files exist
@@ -68,34 +47,53 @@ The application displays current input status:
 
 ## Running the Application
 
-Start the development server with:
+### Hardware Mode (Default)
+Run the application with physical flipdot display + browser preview:
 
 ```bash
 npm run dev
 ```
 
-This runs the application with nodemon for automatic reloading when files are modified.
+This is the primary mode for production use with actual hardware. Once running:
+1. The physical flipdot display will show the game
+2. Open your browser to `http://localhost:3005` for the web preview
+3. Use controllers or keyboard for input
 
-Once running:
-1. Open your browser and navigate to `http://localhost:3000/view`
-2. You'll see the real-time preview of the flipdot display output
+### Browser-Only Mode (Development)
+For development without hardware:
+
+```bash
+npm run prototype
+```
+
+This runs browser-only simulation at `http://localhost:3005`
+
+### Testing Input
+Test your input setup before running the game:
+
+```bash
+npm run test-input
+```
 
 ## Project Structure
 
-- `src/index.js` - Main entry point that sets up the canvas, rendering loop, and Pacxon game
-- `src/pacxon-flipdot.js` - Pacxon game implementation with flipdot-optimized rendering
+- `src/index.js` - Main entry point with hardware output and browser preview
+- `src/pacxon-flipdot-refactored.js` - Pacxon game engine with optimized, clean code structure
+- `src/prototype-renderer-refactored.js` - Browser visualization with dot simulation
+- `src/prototype-preview-refactored.js` - Express server providing web preview and controls
+- `src/prototype-refactored.js` - Browser-only prototype for development without hardware
 - `src/controller.js` - Xbox 360 controller input handling
-- `src/ticker.js` - Handles the timing mechanism (like requestAnimationFrame for Node.js)
-- `src/preview.js` - Creates a simple HTTP server for real-time preview in the browser
+- `src/nes-controller.js` - NES controller input handling
+- `src/ticker.js` - Timing mechanism for consistent frame rate
 - `src/settings.js` - Configuration for display resolution, panel layout, and framerate
-- `output/` - Directory containing generated PNG frames
+- `output/` - Directory containing generated debug frames
 
 ## Game Features
 
 ### 🎮 Pacxon Game
 The flipdot display runs a Pacxon-style game with the following features:
 - **Real-time score display** in the top-right corner using custom 3-pixel wide font
-- **Fill percentage tracking** - goal is to fill 80% of the screen
+- **Fill percentage tracking** - goal is to fill 90% of the screen
 - **Lives system** with enemy collision detection
 - **Custom bitmap font** for all text rendering
 - **Optimized for flipdot display** - pure black and white graphics
@@ -106,11 +104,6 @@ The flipdot display runs a Pacxon-style game with the following features:
 - **Size**: 5 pixels tall, optimized for readability on small displays
 - **Real-time updates** as you play the game
 
-### 🎨 Font Visualization
-View the custom number font:
-```bash
-npm run font-demo
-```
 
 ## Settings and Configuration
 
@@ -126,59 +119,31 @@ export const RESOLUTION = [               // Total resolution calculation
 ];
 ```
 
-## Creating Your Own Animations
+### Key Modules
 
-The main rendering loop is in `src/index.js`. To create your own animations:
+**Game Engine** (`pacxon-flipdot-refactored.js`)
+- Constants for timings, speeds, and grid dimensions
+- Death animations array with configurable speeds
+- Scene management with data-driven transitions
+- Clean separation of update/render logic
 
-1. Modify the callback function in the `ticker.start()` method
-2. Use the canvas 2D context (`ctx`) to draw your graphics
-3. The graphics are automatically converted to black and white for the flipdot display
+**Renderer** (`prototype-renderer-refactored.js`)
+- Dot-based visualization for browser preview
+- Differential rendering for performance
+- Color constants for visual clarity
 
-Example of drawing a simple animation:
-
-```javascript
-ticker.start(({ deltaTime, elapsedTime }) => {
-    // Clear the canvas
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, width, height);
-    
-    // Draw something (e.g., moving circle)
-    const x = Math.floor(((Math.sin(elapsedTime / 1000) + 1) / 2) * width);
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(x, height/2, 5, 0, Math.PI * 2);
-    ctx.fill();
-});
-```
-
-## Advanced Usage
-
-### Binary Thresholding
-
-The application automatically converts all drawn graphics to pure black and white using thresholding:
-
-```javascript
-// Any pixel with average RGB value > 127 becomes white, otherwise black
-const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-const binary = brightness > 127 ? 255 : 0;
-```
-
-### Output
-
-The rendered frames are saved as PNG files in the `output` directory and can be accessed via the web preview or directly from the filesystem.
-
-## Project Extensions
-
-Some ideas to extend this project:
-- Add text scrolling animations
-- Implement Conway's Game of Life
-- Create a clock or countdown timer
-- Add socket.io for remote control
-- Create a library of animation effects
-- Build an API to control the display
+**Preview Server** (`prototype-preview-refactored.js`)
+- Express server with WebSocket support
+- Command dispatch for web controls
+- Real-time game state updates
+- Audio feedback system
 
 ## Dependencies
 
 - [`canvas`](https://www.npmjs.com/package/canvas) - For creating and manipulating graphics
-- [`nodemon`](https://www.npmjs.com/package/nodemon) - For development auto-reloading 
+- [`@owowagency/flipdot-emu`](packages/owowagency-flipdot-emu-1.0.0.tgz) - Flipdot display driver
+- [`express`](https://www.npmjs.com/package/express) - Web server for browser preview
+- [`ws`](https://www.npmjs.com/package/ws) - WebSocket support for real-time updates
+- [`joystick`](https://www.npmjs.com/package/joystick) - Controller input support
+- [`node-hid`](https://www.npmjs.com/package/node-hid) - HID device communication
+- [`nodemon`](https://www.npmjs.com/package/nodemon) - For development auto-reloading

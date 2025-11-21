@@ -1,4 +1,4 @@
-// FlipDot Prototype Preview Server - Optimized with cleaner structure
+// FlipDot Prototype Preview Server
 import express from "express";
 import { FlipDotPrototypeRenderer } from "./prototype-renderer-refactored.js";
 
