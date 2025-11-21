@@ -13,7 +13,7 @@ import { NESController } from "./nes-controller.js";
 
 // ========== CONSTANTS ==========
 const IS_DEV = process.argv.includes("--dev");
-const USE_HARDWARE = true; //* always enabled
+const USE_HARDWARE = process.argv.includes("--hardware");
 const OUTPUT_DIR = "./output";
 const BRIGHTNESS_THRESHOLD = 127;
 const FONT_PATHS = {
@@ -55,14 +55,24 @@ ticker.start(() => {
 
 // ========== HELPER FUNCTIONS ==========
 function initializeDisplay() {
-  const display = new Display({
-    layout: LAYOUT,
-    panelWidth: 28,
-    isMirrored: true,
-    transport: { type: 'serial', path: '/dev/ttyACM0', baudRate: 57600 }
-  });
-  console.log('Flipdot running');
-  return { display, width: display.width, height: display.height };
+  if (USE_HARDWARE) {
+    const display = new Display({
+      layout: LAYOUT,
+      panelWidth: 28,
+      isMirrored: true,
+      transport: { type: 'serial', path: '/dev/ttyACM0', baudRate: 57600 }
+    });
+    console.log('🎮 Flipdot Prototype with Hardware Output');
+    console.log(`   Display: ${display.width}x${display.height} pixels`);
+    console.log('   Mode: Physical Display + Browser Preview');
+    console.log('   Browser: http://localhost:3005');
+    return { display, width: display.width, height: display.height };
+  }
+  
+  console.log('🎮 Flipdot Prototype (Browser Only)');
+  console.log('   Display: 84x28 pixels');
+  console.log('   Browser: http://localhost:3005');
+  return { display: null, width: 84, height: 28 };
 }
 
 function setupCanvas(canvas) {
@@ -102,7 +112,7 @@ function setupControllers(game) {
     controller.on('connected', () => console.log(`✅ ${name} controller connected!`));
     controller.on('notFound', () => {
       if (!controllers.some(c => c.controller.isConnected)) {
-        console.log('No controllers found. Keyboard input will be used.');
+        console.log('🔍 No controllers found. Keyboard input will be used.');
       }
     });
     controller.on('direction', (dir) => game.setDirection(dir));

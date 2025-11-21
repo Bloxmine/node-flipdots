@@ -54,12 +54,12 @@ export class Xbox360Controller extends EventEmitter {
             }
             
             if (!joystickPath) {
-                console.log('🔍 No joystick device found. Keyboard input will be used.');
+                console.log('No 360 controller found. Keyboard input will be used.');
                 this.emit('notFound');
                 return;
             }
 
-            console.log(`🎮 Xbox 360 controller detected at ${joystickPath}`);
+            console.log(`Xbox 360 controller detected at ${joystickPath}`);
             
             const deviceIndex = parseInt(joystickPath.match(/js(\d+)$/)[1]);
             this.joystick = new Joystick(deviceIndex, 3500, 350); // device, deadzone, sensitivity

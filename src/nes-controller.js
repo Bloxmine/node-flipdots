@@ -58,14 +58,12 @@ export class NESController extends EventEmitter {
             }
             
             if (!this.isConnected) {
-                console.log('🔍 No accessible NES controller found.');
-                console.log('   Tip: You may need to run with sudo or add user to input group:');
-                console.log('   sudo usermod -a -G input $USER');
+                console.log('No accessible NES controller found.');
                 this.emit('notFound');
             }
             
         } catch (error) {
-            console.error('❌ Error initializing NES controller:', error.message);
+            console.error('Error initializing NES controller:', error.message);
             this.emit('error', error);
         }
     }
