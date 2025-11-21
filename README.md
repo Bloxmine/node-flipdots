@@ -90,7 +90,7 @@ npm run test-input
 
 ## Game Features
 
-### 🎮 Pacxon Game
+### Pacxon Game
 The flipdot display runs a Pacxon-style game with the following features:
 - **Real-time score display** in the top-right corner using custom 3-pixel wide font
 - **Fill percentage tracking** - goal is to fill 90% of the screen
@@ -98,26 +98,11 @@ The flipdot display runs a Pacxon-style game with the following features:
 - **Custom bitmap font** for all text rendering
 - **Optimized for flipdot display** - pure black and white graphics
 
-### 📊 Score Display
+### Score Display
 - **Position**: Top-right corner of the display
 - **Font**: Custom 3-pixel wide bitmap numbers (0-9)
 - **Size**: 5 pixels tall, optimized for readability on small displays
 - **Real-time updates** as you play the game
-
-
-## Settings and Configuration
-
-The display settings can be modified in `src/settings.js`:
-
-```javascript
-export const FPS = 15;                    // Frames per second
-export const PANEL_RESOLUTION = [28, 14]; // Size of each panel in dots
-export const PANEL_LAYOUT = [3, 2];       // Layout of panels (horizontal, vertical)
-export const RESOLUTION = [               // Total resolution calculation
-    PANEL_RESOLUTION[0] * PANEL_LAYOUT[0],
-    PANEL_RESOLUTION[1] * PANEL_LAYOUT[1],
-];
-```
 
 ### Key Modules
 
