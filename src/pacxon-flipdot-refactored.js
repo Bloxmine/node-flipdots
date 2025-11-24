@@ -35,6 +35,10 @@ const PLAYER_BLINK_TICKS = 8;
 const PLAYER_MOVE_INTERVAL = 2;
 const SPEED_INCREMENT = 0.05;
 const IDLE_ANIMATION_SPEED = 1.5;
+const FREEZE_DURATION = 135; // 9 seconds at 15 FPS
+const POWERUP_BLINK_INTERVAL = 10;
+const PERFECT_CLEAR_PCT = 95;
+const PERFECT_FLASH_MS = 1500;
 
 const DEATH_ANIMATIONS = [
   { frames: pacmanDead, speed: 100 },
@@ -85,6 +89,9 @@ export class PacxonGame {
     this.idleAnimation = this.createIdleAnimationState();
     this.howToPlay = { scrollOffset: 0, startTime: 0 };
     this.nameEntry = this.createNameEntryState();
+    this.powerup = { x: -1, y: -1, active: false, blinkState: false };
+    this.freezeTimer = 0;
+    this.perfectClear = { active: false, startTime: 0 };
     
     this.highScores = this.loadHighScores();
     this.gameState = this.getInitialState();
@@ -137,9 +144,9 @@ export class PacxonGame {
   createBorderedGrid() {
     const grid = this.makeEmpty(GRID_W, GRID_H, false);
     for (let x = 0; x < GRID_W; x++) {
-      grid[0][x] = grid[GRID_H - 1][x] = true;
+      grid[0][x] = grid[GRID_H - 2][x] = true; // Bottom border moved up one line
     }
-    for (let y = 0; y < GRID_H; y++) {
+    for (let y = 0; y < GRID_H - 1; y++) { // Exclude the very bottom line from side borders
       grid[y][0] = grid[y][GRID_W - 1] = true;
     }
     return grid;
@@ -161,6 +168,21 @@ export class PacxonGame {
     }));
   }
 
+  spawnPowerup(walls) {
+    // Find random empty spot for powerup
+    let attempts = 0;
+    while (attempts < 100) {
+      const x = Math.floor(Math.random() * (GRID_W - 4)) + 2;
+      const y = Math.floor(Math.random() * (GRID_H - 4)) + 2;
+      
+      if (!walls[y][x]) {
+        this.powerup = { x, y, active: true, blinkState: false };
+        return;
+      }
+      attempts++;
+    }
+  }
+
   // ========== INPUT HANDLING ==========
   setupInputHandlers() {
     if (typeof document === 'undefined') return;
@@ -176,6 +198,13 @@ export class PacxonGame {
         this.dir = direction;
       } else if (key === 'r') {
         this.restart();
+      } else if (key === 'n' && this.gameState.scene === 'PLAYING') {
+        // Next level for testing
+        this.nextLevel();
+      } else if (key === '3' && this.gameState.scene === 'TITLE') {
+        // Quick test: start at level 3 to see powerup
+        this.currentLevel = 3;
+        this.startGame();
       }
     });
 
@@ -336,6 +365,12 @@ export class PacxonGame {
   startActualGame() {
     this.gameState.scene = 'PLAYING';
     this.gameState.playing = true;
+    
+    // Spawn powerup if level 3+
+    if (this.currentLevel >= 3) {
+      this.spawnPowerup(this.gameState.walls);
+      console.log(`Powerup spawned at (${this.powerup.x}, ${this.powerup.y})`);
+    }
   }
 
   restart() {
@@ -373,6 +408,12 @@ export class PacxonGame {
         if (this.gameState.scene === 'LEVEL_TRANSITION') {
           this.gameState.scene = 'PLAYING';
           this.gameState.playing = true;
+          
+          // Spawn powerup after level starts (level 3+)
+          if (this.currentLevel >= 3) {
+            this.spawnPowerup(this.gameState.walls);
+            console.log(`Powerup spawned at (${this.powerup.x}, ${this.powerup.y})`);
+          }
         }
       }, LEVEL_TEXT_DISPLAY_MS);
     }, animationDuration);
@@ -387,7 +428,8 @@ export class PacxonGame {
 
   // ========== GAME LOGIC ==========
   inBounds(x, y) {
-    return x >= 0 && y >= 0 && x < GRID_W && y < GRID_H;
+    // Exclude the bottom progress bar line (y = GRID_H - 1)
+    return x >= 0 && y >= 0 && x < GRID_W && y < GRID_H - 1;
   }
   
   makeEmpty(w, h, v) {
@@ -550,6 +592,14 @@ export class PacxonGame {
       this.flashState = !this.flashState;
     }
     
+    if (this.tick % POWERUP_BLINK_INTERVAL === 0) {
+      this.powerup.blinkState = !this.powerup.blinkState;
+    }
+    
+    if (this.freezeTimer > 0) {
+      this.freezeTimer--;
+    }
+    
     if (this.gameState.scene === 'TITLE') {
       this.updateIdleAnimation();
     }
@@ -573,6 +623,9 @@ export class PacxonGame {
   }
 
   updateEnemies() {
+    // Skip enemy movement if frozen
+    if (this.freezeTimer > 0) return;
+    
     this.gameState.enemies = this.gameState.enemies.map(e => {
       let nx = e.x + e.vx;
       let ny = e.y + e.vy;
@@ -600,6 +653,12 @@ export class PacxonGame {
     
     this.gameState.player = { x: nx, y: ny };
     this.gameState.trail.add(`${nx},${ny}`);
+    
+    // Check powerup collection
+    if (this.powerup.active && nx === this.powerup.x && ny === this.powerup.y) {
+      this.powerup.active = false;
+      this.freezeTimer = FREEZE_DURATION;
+    }
 
     if (this.checkCollision()) {
       this.handleCollision();
@@ -672,15 +731,42 @@ export class PacxonGame {
   }
 
   checkWinCondition() {
-    const filled = this.gameState.walls.flat().filter(Boolean).length;
-    const pct = Math.round((filled / (GRID_W * GRID_H)) * 100);
+    // Calculate fill percentage (excluding borders and progress bar line)
+    const playableWidth = GRID_W - 2;
+    const playableHeight = GRID_H - 3;
+    const totalPlayableCells = playableWidth * playableHeight;
+    
+    // Count filled cells in playable area only
+    let filledPlayable = 0;
+    for (let y = 1; y < GRID_H - 2; y++) {
+      for (let x = 1; x < GRID_W - 1; x++) {
+        if (this.gameState.walls[y][x]) {
+          filledPlayable++;
+        }
+      }
+    }
+    
+    const pct = Math.round((filledPlayable / totalPlayableCells) * 100);
     
     if (!this.gameState.win && pct >= WIN_PCT) {
       this.gameState.win = true;
       this.gameState.playing = false;
-      setTimeout(() => {
-        if (this.gameState.win) this.nextLevel();
-      }, LEVEL_ADVANCE_DELAY_MS);
+      
+      // Check for perfect clear
+      const isPerfect = pct >= PERFECT_CLEAR_PCT;
+      
+      if (isPerfect) {
+        this.perfectClear.active = true;
+        this.perfectClear.startTime = Date.now();
+        setTimeout(() => {
+          this.perfectClear.active = false;
+          if (this.gameState.win) this.nextLevel();
+        }, PERFECT_FLASH_MS + LEVEL_ADVANCE_DELAY_MS);
+      } else {
+        setTimeout(() => {
+          if (this.gameState.win) this.nextLevel();
+        }, LEVEL_ADVANCE_DELAY_MS);
+      }
     }
   }
 
@@ -828,6 +914,19 @@ export class PacxonGame {
       return;
     }
     
+    // Show PERFECT! flash if active
+    if (this.perfectClear.active) {
+      if (this.flashState) {
+        ctx.fillStyle = "#fff";
+        const text = "PERFECT!";
+        const textWidth = text.length * CHAR_WIDTH;
+        const x = Math.floor((this.width - textWidth) / 2);
+        const y = Math.floor((this.height - CHAR_HEIGHT) / 2);
+        this.renderBigText(ctx, text, x, y);
+      }
+      return;
+    }
+    
     ctx.fillStyle = "#fff";
     
     // Walls
@@ -850,6 +949,11 @@ export class PacxonGame {
       ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, 1);
     });
     
+    // Powerup (blinking dot)
+    if (this.powerup.active && this.powerup.blinkState) {
+      ctx.fillRect(this.powerup.x, this.powerup.y, 1, 1);
+    }
+    
     // Player (blinking)
     if (this.tick % PLAYER_BLINK_TICKS < 4) {
       const { x, y } = this.gameState.player;
@@ -861,6 +965,9 @@ export class PacxonGame {
     
     // Lives
     this.renderLives(ctx);
+    
+    // Progress bar at the bottom
+    this.renderProgressBar(ctx);
   }
 
   renderLives(ctx) {
@@ -872,6 +979,52 @@ export class PacxonGame {
       }
     }
     this.renderCustomText(ctx, livesText, this.width - width - 1, 1, 1, this.gameState.walls);
+    
+    // Show freeze timer below lives if active
+    if (this.freezeTimer > 0) {
+      const secondsLeft = Math.ceil(this.freezeTimer / 15); // Convert ticks to seconds
+      const timerText = secondsLeft.toString();
+      let timerWidth = 0;
+      for (let char of timerText) {
+        if (characters[char]) {
+          timerWidth += characters[char][0].length + 1;
+        }
+      }
+      this.renderCustomText(ctx, timerText, this.width - timerWidth - 1, 7, 1, this.gameState.walls);
+    }
+  }
+
+  renderProgressBar(ctx) {
+    // Calculate fill percentage (excluding borders and progress bar line)
+    // Playable area is (GRID_W - 2) * (GRID_H - 3) because:
+    // - 2 pixels for left/right borders
+    // - 3 pixels for top, bottom border, and progress bar line
+    const playableWidth = GRID_W - 2;
+    const playableHeight = GRID_H - 3;
+    const totalPlayableCells = playableWidth * playableHeight;
+    
+    // Count filled cells in playable area only (excluding borders)
+    let filledPlayable = 0;
+    for (let y = 1; y < GRID_H - 2; y++) {
+      for (let x = 1; x < GRID_W - 1; x++) {
+        if (this.gameState.walls[y][x]) {
+          filledPlayable++;
+        }
+      }
+    }
+    
+    const fillPct = filledPlayable / totalPlayableCells;
+    
+    // Progress bar fills from left to right on the bottom line with blinking effect
+    const progressWidth = Math.floor(fillPct * GRID_W);
+    
+    // Only render if flashState is true (makes it blink)
+    if (this.flashState) {
+      ctx.fillStyle = "#fff";
+      for (let x = 0; x < progressWidth; x++) {
+        ctx.fillRect(x, GRID_H - 1, 1, 1);
+      }
+    }
   }
 
   // ========== RENDERING HELPERS ==========
