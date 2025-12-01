@@ -109,7 +109,7 @@ function setupControllers(game) {
   ];
   
   controllers.forEach(({ controller, name }) => {
-    controller.on('connected', () => console.log(`✅ ${name} controller connected!`));
+    controller.on('connected', () => console.log(`${name} controller connected!`));
     controller.on('notFound', () => {
       if (!controllers.some(c => c.controller.isConnected)) {
         console.log('🔍 No controllers found. Keyboard input will be used.');
