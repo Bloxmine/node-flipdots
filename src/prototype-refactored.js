@@ -62,16 +62,16 @@ function initializeDisplay() {
       isMirrored: true,
       transport: { type: 'serial', path: '/dev/ttyACM0', baudRate: 57600 }
     });
-    console.log('🎮 Flipdot Prototype with Hardware Output');
-    console.log(`   Display: ${display.width}x${display.height} pixels`);
-    console.log('   Mode: Physical Display + Browser Preview');
-    console.log('   Browser: http://localhost:3005');
+    console.log('Flipdot Prototype with Hardware Output');
+    console.log(`Display: ${display.width}x${display.height} pixels`);
+    console.log('Mode: Physical Display + Browser Preview');
+    console.log('Browser: http://localhost:3005');
     return { display, width: display.width, height: display.height };
   }
   
-  console.log('🎮 Flipdot Prototype (Browser Only)');
-  console.log('   Display: 84x28 pixels');
-  console.log('   Browser: http://localhost:3005');
+  console.log('Flipdot Prototype (Browser Only)');
+  console.log('Display: 84x28 pixels');
+  console.log('Browser: http://localhost:3005');
   return { display: null, width: 84, height: 28 };
 }
 

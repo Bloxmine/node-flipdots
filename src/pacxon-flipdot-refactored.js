@@ -1,7 +1,7 @@
 // --- PACXON GAME FOR FLIPDOT DISPLAY ---
 // Authors: Hein Dijstelbloem (prototype rendering, conversion to work on the flipdot board, score system, level system, fonts, further gameplay), Mohammed Ali Hussein (initial code, initial version of the gameplay), Christ Kastelijn (pixel art animations), Krystiana Petrova (testing).
-// Date: 2025-11-21
-// Version: 0.3.0 (Refactored)
+// Date: 2025-12-01
+// Version: 0.4.0 (Refactored)
 // Description: Pacxon clone optimized for flipdot display
 
 import fs from 'fs';
