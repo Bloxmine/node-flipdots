@@ -949,9 +949,14 @@ export class PacxonGame {
       ctx.fillRect(Math.round(e.x), Math.round(e.y), 1, 1);
     });
     
-    // Powerup (blinking dot)
+    // Powerup
     if (this.powerup.active && this.powerup.blinkState) {
-      ctx.fillRect(this.powerup.x, this.powerup.y, 1, 1);
+      const px = this.powerup.x;
+      const py = this.powerup.y;
+      const onFilled = this.gameState.walls[py][px];
+      ctx.fillStyle = onFilled ? "#000" : "#fff";
+      ctx.fillRect(px, py, 1, 1);
+      ctx.fillStyle = "#fff";
     }
     
     // Player (blinking)
