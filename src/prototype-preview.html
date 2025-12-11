@@ -36,6 +36,7 @@
         align-items: center;
         background: url('/images/background.jpg') center/cover no-repeat fixed;
         background-color: var(--color-black);
+        transition: background-image 0.3s ease;
     }
 
     h1 { margin-bottom: 20px; text-align: center; }
@@ -114,6 +115,7 @@
   <div class="game-controls">
     <h3>Game Controls</h3>
     <div class="action-buttons">
+      <button class="action-btn" onclick="sendCommand('BACK')" style="background: #336; border-color: #558;">Back to Menu (ESC)</button>
       <button class="action-btn restart" onclick="sendCommand('RESTART')">Restart Game (R)</button>
     </div>
     
@@ -226,6 +228,8 @@
       'arrowleft': 'LEFT', 'a': 'LEFT',
       'arrowright': 'RIGHT', 'd': 'RIGHT',
       'r': 'RESTART',
+      'escape': 'BACK',
+      'enter': 'START',
       'n': 'NEXT_LEVEL',
       '+': 'ADD_LIFE', '=': 'ADD_LIFE',
       '-': 'LOSE_LIFE', '_': 'LOSE_LIFE'
@@ -239,9 +243,23 @@
       }
     });
     
+    // Background update function
+    function updateBackground() {
+      fetch('/background')
+        .then(r => r.json())
+        .then(d => {
+          if (d.background) {
+            document.body.style.backgroundImage = `url('/images/${d.background}')`;
+          }
+        })
+        .catch(() => {});
+    }
+    
     // init
     updateDisplay();
+    updateBackground();
     setInterval(updateDisplay, UPDATE_INTERVAL);
+    setInterval(updateBackground, 1000); // Check for background changes every second
     
     setInterval(() => {
       fetch('/status')

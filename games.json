@@ -1,0 +1,32 @@
+{
+  "games": [
+    {
+      "id": "pacxon",
+      "name": "PAC-XON",
+      "module": "./src/pacxon-flipdot-refactored.js",
+      "class": "PacxonGame",
+      "backgroundImage": "pacxon.jpg"
+    },
+    {
+      "id": "pong",
+      "name": "PONG",
+      "module": "./src/pong-game.js",
+      "class": "PongGame",
+      "backgroundImage": "pong.jpg"
+    },
+    {
+      "id": "snake",
+      "name": "SNAKE",
+      "module": "./src/snake-game.js",
+      "class": "SnakeGame",
+      "backgroundImage": "background.jpg"
+    },
+    {
+      "id": "breakout",
+      "name": "BREAKOUT",
+      "module": "./src/breakout-game.js",
+      "class": "BreakoutGame",
+      "backgroundImage": "background.jpg"
+    }
+  ]
+}

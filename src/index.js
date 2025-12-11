@@ -3,13 +3,18 @@ import { Ticker } from "./ticker.js";
 import { createCanvas, registerFont } from "canvas";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { FPS, LAYOUT } from "./settings.js";
 import { Display } from "@owowagency/flipdot-emu";
 import { FlipDotPrototypeRenderer } from "./prototype-renderer-refactored.js";
-import { updatePrototypeRenderer, setGameInstance } from "./prototype-preview-refactored.js";
-import { PacxonGame } from "./pacxon-flipdot-refactored.js";
+import { updatePrototypeRenderer, setGameInstance, setBackgroundImage, setCommandCallback } from "./prototype-preview-refactored.js";
+import { GameSelector } from "./game-selector.js";
+import { GameLoader } from "./game-loader.js";
 import { Xbox360Controller } from "./controller.js";
 import { NESController } from "./nes-controller.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ========== CONSTANTS ==========
 const IS_DEV = process.argv.includes("--dev");
@@ -27,19 +32,32 @@ const { display, width, height } = initializeDisplay();
 const canvas = createCanvas(width, height);
 const ctx = setupCanvas(canvas);
 const prototypeRenderer = setupRenderer(width, height);
-const pacxonGame = new PacxonGame(width, height, false);
 
-setGameInstance(pacxonGame);
+// Game system state
+let currentMode = 'SELECTOR'; // 'SELECTOR' or 'GAME'
+const gameLoader = new GameLoader();
+const games = GameLoader.loadGamesConfig();
+const gameSelector = new GameSelector(width, height, games);
+let currentGame = null;
+
 setupFonts();
 ensureOutputDir();
-setupControllers(pacxonGame);
+setupControllers();
 setupProcessHandlers();
+setBackgroundImage('background.jpg'); // Default black background
+setCommandCallback(handleWebCommand);
 
 // ========== MAIN LOOP ==========
 const ticker = new Ticker({ fps: FPS });
 ticker.start(() => {
-  pacxonGame.update();
-  renderFrame(ctx, width, height);
+  if (currentMode === 'SELECTOR') {
+    gameSelector.update();
+    renderFrame(ctx, width, height);
+  } else if (currentMode === 'GAME' && currentGame) {
+    currentGame.update();
+    renderFrame(ctx, width, height);
+  }
+  
   const imageData = ctx.getImageData(0, 0, width, height);
   
   prototypeRenderer.renderFromImageData(imageData);
@@ -82,7 +100,7 @@ function setupRenderer(width, height) {
 
 function setupFonts() {
   Object.entries(FONT_PATHS).forEach(([family, relativePath]) => {
-    registerFont(path.resolve(import.meta.dirname, relativePath), { family });
+    registerFont(path.resolve(__dirname, relativePath), { family });
   });
 }
 
@@ -92,7 +110,7 @@ function ensureOutputDir() {
   }
 }
 
-function setupControllers(game) {
+function setupControllers() {
   const controllers = [
     { controller: new Xbox360Controller(), name: 'Xbox 360' },
     { controller: new NESController(), name: 'NES' }
@@ -105,25 +123,91 @@ function setupControllers(game) {
         console.log('No controllers found. Keyboard input will be used.');
       }
     });
-    controller.on('direction', (dir) => game.setDirection(dir));
-    controller.on('restart', () => game.restart());
-    controller.on('buttonPress', (btn) => handleButtonPress(game, btn));
+    controller.on('direction', (dir) => handleDirection(dir));
+    controller.on('restart', () => handleRestart());
+    controller.on('buttonPress', (btn) => handleButtonPress(btn));
   });
 }
 
-function handleButtonPress(game, button) {
-  game.handleButtonPress(button);
-  
-  if (button !== 'A' && button !== 'START') return;
-  
-  const { scene } = game.gameState;
-  
-  if (scene === 'TITLE' && game.idleAnimation.phase === 'waiting') {
-    game.startGame();
-  } else if (scene === 'HOW_TO_PLAY') {
-    game.startActualGame();
-  } else if (scene !== 'NAME_ENTRY') {
-    game.restart();
+function handleDirection(dir) {
+  if (currentMode === 'SELECTOR') {
+    gameSelector.setDirection(dir);
+  } else if (currentMode === 'GAME' && currentGame) {
+    currentGame.setDirection(dir);
+  }
+}
+
+function handleRestart() {
+  if (currentMode === 'GAME' && currentGame) {
+    currentGame.restart();
+  }
+}
+
+async function handleButtonPress(button) {
+  if (currentMode === 'SELECTOR') {
+    // Enter key to select game
+    if (button === 'A' || button === 'START') {
+      const selectedGame = gameSelector.getSelectedGame();
+      await loadGame(selectedGame);
+    }
+  } else if (currentMode === 'GAME') {
+    // ESC or SELECT to go back to menu
+    if (button === 'BACK' || button === 'SELECT') {
+      returnToSelector();
+    } else if (currentGame) {
+      currentGame.handleButtonPress(button);
+      
+      if (button !== 'A' && button !== 'START') return;
+      
+      const { scene } = currentGame.gameState;
+      
+      if (scene === 'TITLE' && currentGame.idleAnimation?.phase === 'waiting') {
+        currentGame.startGame();
+      } else if (scene === 'HOW_TO_PLAY') {
+        currentGame.startActualGame();
+      } else if (scene !== 'NAME_ENTRY') {
+        currentGame.restart();
+      }
+    }
+  }
+}
+
+async function loadGame(gameConfig) {
+  try {
+    console.log(`Loading game: ${gameConfig.name}`);
+    currentGame = await gameLoader.loadGame(gameConfig, width, height);
+    setGameInstance(currentGame);
+    setBackgroundImage(gameConfig.backgroundImage);
+    currentMode = 'GAME';
+    console.log(`Game loaded: ${gameConfig.name}`);
+  } catch (error) {
+    console.error('Failed to load game:', error);
+    currentMode = 'SELECTOR';
+  }
+}
+
+function returnToSelector() {
+  console.log('Returning to game selector');
+  currentMode = 'SELECTOR';
+  currentGame = null;
+  gameLoader.unloadGame();
+  setGameInstance(null);
+  setBackgroundImage('background.jpg'); // Reset to black background
+}
+
+function handleWebCommand(command) {
+  // Handle web interface commands
+  if (currentMode === 'SELECTOR') {
+    if (command === 'UP') gameSelector.setDirection('up');
+    else if (command === 'DOWN') gameSelector.setDirection('down');
+    else if (command === 'START' || command === 'A') {
+      const selectedGame = gameSelector.getSelectedGame();
+      loadGame(selectedGame);
+    }
+  } else if (currentMode === 'GAME') {
+    if (command === 'BACK' || command === 'SELECT') {
+      returnToSelector();
+    }
   }
 }
 
@@ -137,7 +221,12 @@ function setupProcessHandlers() {
 function renderFrame(ctx, width, height) {
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, width, height);
-  pacxonGame.render(ctx);
+  
+  if (currentMode === 'SELECTOR') {
+    gameSelector.render(ctx);
+  } else if (currentMode === 'GAME' && currentGame) {
+    currentGame.render(ctx);
+  }
 }
 
 function applyBinaryThreshold(imageData) {

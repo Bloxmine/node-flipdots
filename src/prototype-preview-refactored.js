@@ -16,6 +16,8 @@ const MAX_CONSECUTIVE_ERRORS = 3;
 // ========== STATE ==========
 let prototypeRenderer = null;
 let gameInstance = null;
+let currentBackgroundImage = 'background.jpg';
+let commandCallback = null;
 let previousGameState = {
   scene: null,
   lives: null,
@@ -31,6 +33,14 @@ export function setGameInstance(game) {
 
 export function updatePrototypeRenderer(renderer) {
   prototypeRenderer = renderer;
+}
+
+export function setBackgroundImage(imageName) {
+  currentBackgroundImage = imageName;
+}
+
+export function setCommandCallback(callback) {
+  commandCallback = callback;
 }
 
 // ========== SERVER ==========
@@ -65,37 +75,40 @@ app.get("/frame-raw", (req, res) => {
 });
 
 app.post("/command", (req, res) => {
-  if (!gameInstance) {
-    return res.status(400).json({ error: "Game not initialized" });
-  }
-  
   const { command } = req.body;
   
-  const commandHandlers = {
-    'UP': () => gameInstance.setDirection('UP'),
-    'DOWN': () => gameInstance.setDirection('DOWN'),
-    'LEFT': () => gameInstance.setDirection('LEFT'),
-    'RIGHT': () => gameInstance.setDirection('RIGHT'),
-    'RESTART': () => gameInstance.restart(),
-    'NEXT_LEVEL': () => gameInstance.nextLevel?.(),
-    'ADD_LIFE': () => {
-      if (gameInstance.gameState?.lives !== undefined) {
-        gameInstance.gameState.lives = Math.min(gameInstance.gameState.lives + 1, 9);
-      }
-    },
-    'LOSE_LIFE': () => {
-      if (gameInstance.gameState?.lives > 0) {
-        gameInstance.gameState.lives--;
-      }
-    }
-  };
-  
-  const handler = commandHandlers[command];
-  if (!handler) {
-    return res.status(400).json({ error: "Invalid command" });
+  // Try callback first (for system commands like BACK/START in selector mode)
+  if (commandCallback) {
+    commandCallback(command);
   }
   
-  handler();
+  // Then handle game-specific commands
+  if (gameInstance) {
+    const commandHandlers = {
+      'UP': () => gameInstance.setDirection('UP'),
+      'DOWN': () => gameInstance.setDirection('DOWN'),
+      'LEFT': () => gameInstance.setDirection('LEFT'),
+      'RIGHT': () => gameInstance.setDirection('RIGHT'),
+      'RESTART': () => gameInstance.restart(),
+      'NEXT_LEVEL': () => gameInstance?.nextLevel?.(),
+      'ADD_LIFE': () => {
+        if (gameInstance.gameState?.lives !== undefined) {
+          gameInstance.gameState.lives = Math.min(gameInstance.gameState.lives + 1, 9);
+        }
+      },
+      'LOSE_LIFE': () => {
+        if (gameInstance.gameState?.lives > 0) {
+          gameInstance.gameState.lives--;
+        }
+      }
+    };
+    
+    const handler = commandHandlers[command];
+    if (handler) {
+      handler();
+    }
+  }
+  
   res.json({ success: true });
 });
 
@@ -105,6 +118,10 @@ app.get("/status", (req, res) => {
   }
   
   res.send(gameInstance.getStatus() || "Game running...");
+});
+
+app.get("/background", (req, res) => {
+  res.json({ background: currentBackgroundImage });
 });
 
 app.get("/sound-event", (req, res) => {
@@ -120,6 +137,10 @@ app.get("/sound-event", (req, res) => {
 
 // ========== SOUND DETECTION ==========
 function detectSoundEvent(currentState) {
+  if (!currentState) {
+    return { sound: null, stop: null };
+  }
+
   let soundToPlay = null;
   let soundToStop = null;
 
@@ -147,13 +168,13 @@ function detectSoundEvent(currentState) {
     previousGameState.scene = currentState.scene;
   }
 
-  // High scores display
+  // High scores display (only if gameInstance has nameEntry property)
   if (currentState.scene === 'NAME_ENTRY' && 
-      gameInstance.nameEntry.showingScores && 
+      gameInstance.nameEntry?.showingScores && 
       !previousGameState.showingScores) {
     soundToPlay = 'pacman_intermission.wav';
   }
-  previousGameState.showingScores = gameInstance.nameEntry.showingScores;
+  previousGameState.showingScores = gameInstance.nameEntry?.showingScores || false;
 
   // Life lost
   if (currentState.lives !== null && 
@@ -165,10 +186,11 @@ function detectSoundEvent(currentState) {
 
   // Player movement (commented out chomp sound = annoying)
   if (currentState.scene === 'PLAYING' && currentState.playing) {
-    const playerX = currentState.player.x;
-    const playerY = currentState.player.y;
+    const playerX = currentState.player?.x;
+    const playerY = currentState.player?.y;
     
-    if (previousGameState.playerX !== null && 
+    if (playerX !== undefined && playerY !== undefined &&
+        previousGameState.playerX !== null && 
         (playerX !== previousGameState.playerX || playerY !== previousGameState.playerY)) {
       // soundToPlay = 'pacman_chomp.wav';
     }

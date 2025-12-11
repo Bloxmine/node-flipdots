@@ -78,7 +78,10 @@ npm run test-input
 ## Project Structure
 
 - `src/index.js` - Main entry point with hardware output and browser preview
+- `src/game-selector.js` - Game selection menu with 5x5 font navigation
+- `src/game-loader.js` - Dynamic game loading system
 - `src/pacxon-flipdot-refactored.js` - Pacxon game engine with optimized, clean code structure
+- `src/pong-game.js` - Example Pong game (placeholder)
 - `src/prototype-renderer-refactored.js` - Browser visualization with dot simulation
 - `src/prototype-preview-refactored.js` - Express server providing web preview and controls
 - `src/prototype-refactored.js` - Browser-only prototype for development without hardware
@@ -86,7 +89,118 @@ npm run test-input
 - `src/nes-controller.js` - NES controller input handling
 - `src/ticker.js` - Timing mechanism for consistent frame rate
 - `src/settings.js` - Configuration for display resolution, panel layout, and framerate
+- `games.json` - Game registry configuration
 - `output/` - Directory containing generated debug frames
+
+## Adding New Games
+
+The system is designed to be expandable. You can easily add new games by following these steps:
+
+### 1. Create Your Game Class
+
+Create a new file in the `src/` directory (e.g., `src/my-game.js`). Your game class must implement these methods:
+
+```javascript
+export class MyGame {
+  constructor(width, height, renderToCanvas = true) {
+    this.width = width;
+    this.height = height;
+    this.gameState = {
+      scene: 'PLAYING',
+      lives: 3,
+      playing: true,
+      player: { x: 0, y: 0 }
+    };
+  }
+
+  // Handle directional input (UP, DOWN, LEFT, RIGHT)
+  setDirection(direction) {
+    // Your movement logic
+  }
+
+  // Handle button presses (A, B, START, etc.)
+  handleButtonPress(button) {
+    // Your button logic
+  }
+
+  // Restart the game
+  restart() {
+    // Reset game state
+  }
+
+  // Update game logic (called every frame)
+  update() {
+    // Your update logic
+  }
+
+  // Render the game (called every frame)
+  render(ctx) {
+    // Draw to canvas context
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x, y, width, height);
+  }
+
+  // Return status text for web UI
+  getStatus() {
+    return 'Game Status: Playing';
+  }
+}
+```
+
+### 2. Add Background Image
+
+Place your background image in the `images/` directory (e.g., `images/my-game.jpg`).
+
+### 3. Register in games.json
+
+Add your game to the `games.json` configuration file:
+
+```json
+{
+  "games": [
+    {
+      "id": "my-game",
+      "name": "MY GAME",
+      "module": "./src/my-game.js",
+      "class": "MyGame",
+      "backgroundImage": "my-game.jpg"
+    }
+  ]
+}
+```
+
+**Configuration Fields:**
+- `id`: Unique identifier for the game
+- `name`: Display name in the selector menu (use uppercase for best 5x5 font rendering)
+- `module`: Path to your game module (relative to project root)
+- `class`: Name of the exported class
+- `backgroundImage`: Filename of the background image in `images/` directory
+
+### 4. Test Your Game
+
+Run the application and your game will appear in the selector menu:
+
+```bash
+npm run dev
+```
+
+Use arrow keys (or controller D-pad) to navigate the menu, and press Enter (or A button) to select your game.
+
+### Navigation Controls
+
+**In Game Selector:**
+- Arrow Up/Down: Navigate menu
+- Enter/A Button: Select game
+
+**In Game:**
+- ESC/Back Button: Return to menu
+- Arrow Keys/D-pad: Game controls
+- R: Restart game
+
+### Example Games
+
+- **PAC-XON** (`src/pacxon-flipdot-refactored.js`): Full-featured game with score system, lives, and animations
+- **PONG** (`src/pong-game.js`): Simple placeholder demonstrating the minimal game structure
 
 ## Game Features
 
