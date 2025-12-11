@@ -228,16 +228,20 @@ export class GameSelector {
     const nameX = Math.floor((this.width - nameWidth) / 2);
     this.drawTextWithColor(ctx, selectedGame.name, nameX, 2, '#fff');
 
-    // Draw down arrow pointing to selected icon
-    const selectedIconX = this.iconsStartX + this.selectedIndex * (this.iconSize + this.iconSpacing);
-    const arrowX = selectedIconX + Math.floor(this.iconSize / 2);
-    const arrowY = 10;
+    // Draw down arrow pointing to selected icon (with blink)
+    const showArrow = Math.floor(this.blinkCounter / this.blinkInterval) % 2 === 0;
     
-    ctx.fillStyle = '#fff';
-    // Arrow pointing down: simple v shape
-    ctx.fillRect(arrowX - 2, arrowY, 5, 1);
-    ctx.fillRect(arrowX - 1, arrowY + 1, 3, 1);
-    ctx.fillRect(arrowX, arrowY + 2, 1, 1);
+    if (showArrow) {
+      const selectedIconX = this.iconsStartX + this.selectedIndex * (this.iconSize + this.iconSpacing);
+      const arrowX = selectedIconX + Math.floor(this.iconSize / 2);
+      const arrowY = 10;
+      
+      ctx.fillStyle = '#fff';
+      // Arrow pointing down: simple v shape
+      ctx.fillRect(arrowX - 2, arrowY, 5, 1);
+      ctx.fillRect(arrowX - 1, arrowY + 1, 3, 1);
+      ctx.fillRect(arrowX, arrowY + 2, 1, 1);
+    }
 
     // Draw all game icons horizontally
     for (let i = 0; i < this.games.length; i++) {

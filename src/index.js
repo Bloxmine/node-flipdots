@@ -151,8 +151,8 @@ async function handleButtonPress(button) {
       await loadGame(selectedGame);
     }
   } else if (currentMode === 'GAME') {
-    // ESC or SELECT to go back to menu
-    if (button === 'BACK' || button === 'SELECT') {
+    // ESC, SELECT, or B button to go back to menu
+    if (button === 'BACK' || button === 'SELECT' || button === 'B') {
       returnToSelector();
     } else if (currentGame) {
       currentGame.handleButtonPress(button);

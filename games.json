@@ -9,7 +9,7 @@
     },
     {
       "id": "pong",
-      "name": "PONG",
+      "name": "IMPOSSIPONG",
       "module": "./src/pong-game.js",
       "class": "PongGame",
       "backgroundImage": "pong.jpg"
@@ -26,7 +26,7 @@
       "name": "BREAKOUT",
       "module": "./src/breakout-game.js",
       "class": "BreakoutGame",
-      "backgroundImage": "background.jpg"
+      "backgroundImage": "breakout.jpg"
     }
   ]
 }

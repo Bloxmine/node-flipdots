@@ -1,5 +1,5 @@
 // Breakout Game for Flipdot Display
-import { characters } from './characters.js';
+import { characters, lettersBig } from './characters.js';
 
 export class BreakoutGame {
   constructor(width, height, renderToCanvas = true) {
@@ -24,8 +24,8 @@ export class BreakoutGame {
     this.ball = {
       x: this.width / 2,
       y: this.height / 2,
-      vx: 1.5,
-      vy: -1.5,
+      vx: 0.5,
+      vy: -1.2,
       size: 2,
       stuck: true
     };
@@ -71,6 +71,9 @@ export class BreakoutGame {
       this.paddle.x = Math.min(this.width - this.paddle.width, this.paddle.x + this.paddle.speed);
     } else if (direction === 'UP' && this.ball.stuck) {
       this.ball.stuck = false;
+      // Add slight random variation to launch angle
+      this.ball.vx = (Math.random() - 0.5) * 0.8;
+      this.ball.vy = -1.2;
     }
     this.gameState.player.x = this.paddle.x;
   }
@@ -79,6 +82,9 @@ export class BreakoutGame {
     if (button === 'A' || button === 'START') {
       if (this.ball.stuck) {
         this.ball.stuck = false;
+        // Add slight random variation to launch angle
+        this.ball.vx = (Math.random() - 0.5) * 0.8;
+        this.ball.vy = -1.2;
       } else if (this.gameOver || this.won) {
         this.restart();
       }
@@ -121,9 +127,9 @@ export class BreakoutGame {
         this.ball.x <= this.paddle.x + this.paddle.width) {
       this.ball.vy = -Math.abs(this.ball.vy);
       
-      // Add spin based on where ball hits paddle
+      // Add spin based on where ball hits paddle (reduced from 3 to 1.5)
       const hitPos = (this.ball.x - this.paddle.x) / this.paddle.width;
-      this.ball.vx = (hitPos - 0.5) * 3;
+      this.ball.vx = (hitPos - 0.5) * 1.5;
     }
 
     // Brick collision
@@ -156,8 +162,8 @@ export class BreakoutGame {
         this.gameState.playing = false;
       } else {
         this.ball.stuck = true;
-        this.ball.vx = 1.5;
-        this.ball.vy = -1.5;
+        this.ball.vx = 0.5;
+        this.ball.vy = -1.2;
       }
     }
   }
@@ -179,6 +185,31 @@ export class BreakoutGame {
           }
         }
         cursorX += 4; // 3 pixel width + 1 spacing
+      }
+    }
+  }
+
+  drawText5x5(ctx, text, x, y) {
+    let cursorX = x;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      
+      if (char === ' ') {
+        cursorX += 6;
+        continue;
+      }
+      
+      const charData = lettersBig[char.toUpperCase()];
+      if (charData) {
+        for (let row = 0; row < charData.length; row++) {
+          for (let col = 0; col < charData[row].length; col++) {
+            if (charData[row][col] === 1) {
+              ctx.fillRect(cursorX + col, y + row, 1, 1);
+            }
+          }
+        }
+        cursorX += 6; // 5 pixel width + 1 spacing
       }
     }
   }
@@ -207,15 +238,15 @@ export class BreakoutGame {
     // Draw game over or win
     if (this.gameOver || this.won) {
       const text = this.won ? 'YOU WIN!' : 'GAME OVER';
-      const textWidth = text.length * 4;
+      const textWidth = text.length * 6; // 5x5 font is 6 pixels wide with spacing
       const x = Math.floor((this.width - textWidth) / 2);
-      const y = Math.floor(this.height / 2);
+      const y = Math.floor(this.height / 2) - 2;
       
       ctx.fillStyle = '#000';
-      ctx.fillRect(x - 2, y - 2, textWidth + 4, 9);
+      ctx.fillRect(x - 2, y - 1, textWidth + 4, 7);
       
       ctx.fillStyle = '#fff';
-      ctx.fillText(text, x, y);
+      this.drawText5x5(ctx, text, x, y);
     }
   }
 

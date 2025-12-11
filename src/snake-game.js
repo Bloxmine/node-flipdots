@@ -85,6 +85,9 @@ export class SnakeGame {
     this.gridWidth = Math.floor(width / this.gridSize);
     this.gridHeight = Math.floor(height / this.gridSize);
     
+    this.flashState = false;
+    this.flashCounter = 0;
+    
     this.highScores = this.loadHighScores();
     this.nameEntry = this.createNameEntryState();
     
@@ -173,9 +176,12 @@ export class SnakeGame {
       return;
     }
     
-    // Restart from high score display
+    // Restart from high score display (but only after display time has elapsed)
     if (this.nameEntry.showingScores && (button === 'A' || button === 'START')) {
-      this.restart();
+      const displayDuration = Date.now() - this.nameEntry.scoresDisplayTime;
+      if (displayDuration > 2000) {
+        this.restart();
+      }
       return;
     }
     
@@ -288,13 +294,24 @@ export class SnakeGame {
   }
 
   update() {
+    // Toggle flash state for cursor blinking
+    this.flashCounter++;
+    if (this.flashCounter % 15 === 0) {
+      this.flashState = !this.flashState;
+    }
+    
     // Title screen - wait for player input
     if (this.showTitle) {
       return;
     }
     
     if (this.nameEntry.active) {
-      // Don't auto-exit from high scores, wait for button press
+      // Auto-exit from high scores after display time
+      if (this.nameEntry.showingScores) {
+        if (Date.now() - this.nameEntry.scoresDisplayTime > SCORES_DISPLAY_MS) {
+          this.restart();
+        }
+      }
       return;
     }
     
@@ -503,67 +520,44 @@ export class SnakeGame {
   renderNameEntry(ctx) {
     ctx.fillStyle = '#fff';
     
-    // Score
-    const scoreText = `SCORE ${this.score}`;
-    const scoreWidth = scoreText.length * 6;
-    this.drawText5x5(ctx, scoreText, Math.floor((this.width - scoreWidth) / 2), 4);
-    
-    // Name entry boxes
-    const boxWidth = 7;
-    const boxHeight = 7;
-    const boxSpacing = 2;
-    const totalWidth = (boxWidth * 3) + (boxSpacing * 2);
-    const startX = Math.floor((this.width - totalWidth) / 2);
-    const boxY = 14;
-    
-    const blinkOn = Math.floor(Date.now() / 300) % 2 === 0;
-    
-    for (let i = 0; i < 3; i++) {
-      const boxX = startX + (i * (boxWidth + boxSpacing));
-      
-      // Draw box border
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-      
-      // Draw letter
-      const isCursor = i === this.nameEntry.cursorPos;
-      if (!isCursor || blinkOn) {
-        this.drawText5x5(ctx, this.nameEntry.name[i], boxX + 1, boxY + 1);
-      }
+    if (this.nameEntry.showingScores) {
+      this.renderHighScores(ctx);
+      return;
     }
+    
+    this.drawText5x5(ctx, 'GAME OVER', 16, 2);
+    this.drawText5x5(ctx, `SCORE ${this.score}`, 2, 10);
+    this.drawText5x5(ctx, 'NAME', 2, 18);
+    
+    const nameStartX = 36;
+    this.nameEntry.name.forEach((letter, i) => {
+      const x = nameStartX + i * 8;
+      this.drawText5x5(ctx, letter, x, 18);
+      if (i === this.nameEntry.cursorPos && this.flashState) {
+        ctx.fillRect(x, 24, 5, 1);
+      }
+    });
   }
 
   renderHighScores(ctx) {
     ctx.fillStyle = '#fff';
     
-    // Title
-    const title = 'HIGH SCORES';
-    const titleWidth = title.length * 6;
-    this.drawText5x5(ctx, title, Math.floor((this.width - titleWidth) / 2), 2);
+    const elapsed = Date.now() - this.nameEntry.scoresDisplayTime;
+    const lineHeight = 6;
+    const visibleLines = Math.floor(this.height / lineHeight);
     
-    // Scores list
-    let y = 10;
-    const displayCount = Math.min(4, this.highScores.length);
-    
-    for (let i = 0; i < displayCount; i++) {
-      const score = this.highScores[i];
-      const rank = `${i + 1}`;
-      const name = score.name;
-      const points = score.score.toString();
-      
-      // Rank
-      this.drawText5x5(ctx, rank, 2, y);
-      
-      // Name
-      this.drawText5x5(ctx, name, 10, y);
-      
-      // Score (right aligned)
-      const scoreWidth = points.length * 6;
-      this.drawText5x5(ctx, points, this.width - scoreWidth - 2, y);
-      
-      y += 8;
+    if (this.highScores.length > visibleLines) {
+      const maxScroll = -(this.highScores.length - visibleLines) * lineHeight;
+      const scrollProgress = Math.sin(elapsed * 0.0006);
+      this.nameEntry.scrollOffset = (scrollProgress * 0.5 + 0.5) * maxScroll;
     }
+    
+    this.highScores.forEach((score, i) => {
+      const y = 2 + (i * lineHeight) + this.nameEntry.scrollOffset;
+      if (y >= -lineHeight && y < this.height) {
+        this.drawText5x5(ctx, `${score.name} ${score.score}`, 2, Math.round(y));
+      }
+    });
   }
 
   getStatus() {
