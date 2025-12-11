@@ -34,22 +34,73 @@ const selectionScreen = {
   ]
 };
 
+// 9x9 game icons
+const gameIcons = {
+  "pacxon": [
+    [0,1,1,1,1,1,1,1,0],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,0,1,1,1,0,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,1,1,1,0,0,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,0,1,1,1,0,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,1,1,1,1,1,1,0]
+  ],
+  "pong": [
+    [0,1,1,1,1,1,1,1,0],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,1,0,0,0,0,0,1],
+    [1,0,1,0,0,0,0,0,1],
+    [1,0,1,0,1,0,1,0,1],
+    [1,0,0,0,0,0,1,0,1],
+    [1,0,0,0,0,0,1,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,1,1,1,1,1,1,0]
+  ],
+  "snake": [
+    [0,1,1,1,1,1,1,1,0],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,1,0,0,0,0,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,1,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,1,1,1,1,1,1,0]
+  ],
+  "breakout": [
+    [0,1,1,1,1,1,1,1,0],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [1,0,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,0,1],
+    [0,1,1,1,1,1,1,1,0]
+  ]
+};
+
 export class GameSelector {
   constructor(width, height, games) {
     this.width = width;
     this.height = height;
     this.games = games;
     this.selectedIndex = 0;
-    this.scrollOffset = 0; // For scrolling through long lists
     this.charWidth = 5;
     this.charHeight = 5;
     this.charSpacing = 1;
-    this.lineHeight = this.charHeight + 3;
     this.blinkCounter = 0;
     this.blinkInterval = 15; // Blink every 15 frames
     
-    // Calculate how many items can fit on screen
-    this.maxVisibleItems = Math.floor((this.height - 4) / this.lineHeight);
+    this.iconSize = 9;
+    this.iconSpacing = 2;
+    
+    // Calculate starting position to center icons
+    const totalWidth = (this.iconSize + this.iconSpacing) * this.games.length - this.iconSpacing;
+    this.iconsStartX = Math.floor((this.width - totalWidth) / 2);
+    this.iconsY = 16; // Icons positioned lower to make room for text and arrow
   }
 
   /**
@@ -57,20 +108,10 @@ export class GameSelector {
    * @param {string} direction - 'up', 'down', 'left', 'right'
    */
   setDirection(direction) {
-    if (direction === 'up') {
+    if (direction === 'left') {
       this.selectedIndex = Math.max(0, this.selectedIndex - 1);
-      
-      // Scroll up if needed
-      if (this.selectedIndex < this.scrollOffset) {
-        this.scrollOffset = this.selectedIndex;
-      }
-    } else if (direction === 'down') {
+    } else if (direction === 'right') {
       this.selectedIndex = Math.min(this.games.length - 1, this.selectedIndex + 1);
-      
-      // Scroll down if needed
-      if (this.selectedIndex >= this.scrollOffset + this.maxVisibleItems) {
-        this.scrollOffset = this.selectedIndex - this.maxVisibleItems + 1;
-      }
     }
   }
 
@@ -151,6 +192,27 @@ export class GameSelector {
   }
 
   /**
+   * Draw a 9x9 game icon
+   * @param {CanvasRenderingContext2D} ctx 
+   * @param {string} gameId 
+   * @param {number} x 
+   * @param {number} y 
+   */
+  drawIcon(ctx, gameId, x, y) {
+    const icon = gameIcons[gameId];
+    if (!icon) return;
+
+    ctx.fillStyle = '#fff';
+    for (let row = 0; row < icon.length; row++) {
+      for (let col = 0; col < icon[row].length; col++) {
+        if (icon[row][col] === 1) {
+          ctx.fillRect(x + col, y + row, 1, 1);
+        }
+      }
+    }
+  }
+
+  /**
    * Render the game selector menu
    * @param {CanvasRenderingContext2D} ctx 
    */
@@ -159,55 +221,30 @@ export class GameSelector {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Determine if selection should be visible (blink effect)
-    const showSelection = Math.floor(this.blinkCounter / this.blinkInterval) % 2 === 0;
+    const selectedGame = this.games[this.selectedIndex];
+    
+    // Draw game name at the top
+    const nameWidth = this.getTextWidth(selectedGame.name);
+    const nameX = Math.floor((this.width - nameWidth) / 2);
+    this.drawTextWithColor(ctx, selectedGame.name, nameX, 2, '#fff');
 
-    // Calculate visible range
-    const startIndex = this.scrollOffset;
-    const endIndex = Math.min(startIndex + this.maxVisibleItems, this.games.length);
-    const visibleGames = this.games.slice(startIndex, endIndex);
+    // Draw down arrow pointing to selected icon
+    const selectedIconX = this.iconsStartX + this.selectedIndex * (this.iconSize + this.iconSpacing);
+    const arrowX = selectedIconX + Math.floor(this.iconSize / 2);
+    const arrowY = 10;
+    
+    ctx.fillStyle = '#fff';
+    // Arrow pointing down: simple v shape
+    ctx.fillRect(arrowX - 2, arrowY, 5, 1);
+    ctx.fillRect(arrowX - 1, arrowY + 1, 3, 1);
+    ctx.fillRect(arrowX, arrowY + 2, 1, 1);
 
-    // Starting Y position
-    const startY = 2;
-
-    // Draw up arrow if not at top
-    if (this.scrollOffset > 0) {
-      ctx.fillStyle = '#fff';
-      // Simple up arrow
-      ctx.fillRect(this.width - 4, 0, 1, 1);
-      ctx.fillRect(this.width - 5, 1, 3, 1);
-    }
-
-    // Draw each visible game name
-    visibleGames.forEach((game, displayIndex) => {
-      const actualIndex = startIndex + displayIndex;
-      const y = startY + (displayIndex * this.lineHeight);
-      const textWidth = this.getTextWidth(game.name);
-      const x = 2; // Left-aligned with small margin
+    // Draw all game icons horizontally
+    for (let i = 0; i < this.games.length; i++) {
+      const game = this.games[i];
+      const iconX = this.iconsStartX + i * (this.iconSize + this.iconSpacing);
       
-      const isSelected = actualIndex === this.selectedIndex;
-      
-      // Draw inverted background if selected and blink is on
-      if (isSelected && showSelection) {
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x - 1, y - 1, textWidth + 2, this.charHeight + 2);
-        
-        // Draw text in black (inverted)
-        ctx.fillStyle = '#000';
-        this.drawTextWithColor(ctx, game.name, x, y, '#000');
-      } else {
-        // Draw text in white (normal)
-        ctx.fillStyle = '#fff';
-        this.drawTextWithColor(ctx, game.name, x, y, '#fff');
-      }
-    });
-
-    // Draw down arrow if not at bottom
-    if (endIndex < this.games.length) {
-      ctx.fillStyle = '#fff';
-      // Simple down arrow
-      ctx.fillRect(this.width - 5, this.height - 2, 3, 1);
-      ctx.fillRect(this.width - 4, this.height - 1, 1, 1);
+      this.drawIcon(ctx, game.id, iconX, this.iconsY);
     }
   }
 

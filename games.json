@@ -19,7 +19,7 @@
       "name": "SNAKE",
       "module": "./src/snake-game.js",
       "class": "SnakeGame",
-      "backgroundImage": "background.jpg"
+      "backgroundImage": "snake.jpg"
     },
     {
       "id": "breakout",

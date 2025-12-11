@@ -198,8 +198,8 @@ function returnToSelector() {
 function handleWebCommand(command) {
   // Handle web interface commands
   if (currentMode === 'SELECTOR') {
-    if (command === 'UP') gameSelector.setDirection('up');
-    else if (command === 'DOWN') gameSelector.setDirection('down');
+    if (command === 'LEFT') gameSelector.setDirection('left');
+    else if (command === 'RIGHT') gameSelector.setDirection('right');
     else if (command === 'START' || command === 'A') {
       const selectedGame = gameSelector.getSelectedGame();
       loadGame(selectedGame);
