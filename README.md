@@ -82,7 +82,7 @@ npm run test-input
 - `src/game-loader.js` - Dynamic game loading system
 - `src/pacxon-flipdot-refactored.js` - Pacxon game engine with optimized, clean code structure
 - `src/pong-game.js` - Example Pong game (placeholder)
-- `src/frame-output.js` - Thresholds each rendered frame once and sends it to the browser preview, hardware and debug PNG
+- `src/frame-output.js` - Thresholds each rendered frame once and sends it to the browser preview and hardware
 - `src/prototype-preview-refactored.js` - Express + WebSocket server providing web preview and controls
 - `src/prototype-preview.html` - Browser preview; draws the dots client-side from frames pushed over WebSocket
 - `src/prototype-refactored.js` - Browser-only prototype for development without hardware
@@ -91,7 +91,6 @@ npm run test-input
 - `src/ticker.js` - Timing mechanism for consistent frame rate
 - `src/settings.js` - Configuration for display resolution, panel layout, and framerate
 - `games.json` - Game registry configuration
-- `output/` - Directory containing generated debug frames
 
 ## Adding New Games
 
@@ -231,7 +230,6 @@ The flipdot display runs a Pacxon-style game with the following features:
 - Reads and thresholds the canvas once per tick
 - Only pushes frames that changed
 - Never queues more than one frame on the serial line, so the physical display can't lag behind the game
-- Debug PNG (`--dev`) written at most once per second, off the main thread
 
 **Preview Server** (`prototype-preview-refactored.js`)
 - Single WebSocket (`/ws`) pushes frames (1 bit per dot), status, background and sound events as they change

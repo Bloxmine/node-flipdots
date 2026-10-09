@@ -11,7 +11,6 @@ import { Xbox360Controller } from "./controller.js";
 import { NESController } from "./nes-controller.js";
 
 // ========== CONSTANTS ==========
-const IS_DEV = process.argv.includes("--dev");
 const USE_HARDWARE = process.argv.includes("--hardware");
 const FONT_PATHS = {
   OpenSans: "../fonts/OpenSans-Variable.ttf",
@@ -23,7 +22,7 @@ const FONT_PATHS = {
 const { display, width, height } = initializeDisplay();
 const canvas = createCanvas(width, height);
 const ctx = setupCanvas(canvas);
-const frameOutput = new FrameOutput({ width, height, display, debug: IS_DEV });
+const frameOutput = new FrameOutput({ width, height, display });
 const pacxonGame = new PacxonGame(width, height, false);
 
 setGameInstance(pacxonGame);

@@ -16,7 +16,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ========== CONSTANTS ==========
-const IS_DEV = process.argv.includes("--dev");
 const USE_HARDWARE = true; //* always enabled
 const FONT_PATHS = {
   OpenSans: "../fonts/OpenSans-Variable.ttf",
@@ -31,8 +30,7 @@ const ctx = setupCanvas(canvas);
 const frameOutput = new FrameOutput({
   width,
   height,
-  display: USE_HARDWARE ? display : null,
-  debug: IS_DEV
+  display: USE_HARDWARE ? display : null
 });
 
 // Game system state
