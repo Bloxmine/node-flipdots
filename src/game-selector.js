@@ -108,6 +108,8 @@ export class GameSelector {
    * @param {string} direction - 'up', 'down', 'left', 'right'
    */
   setDirection(direction) {
+    // Controllers send 'LEFT'/'RIGHT', older callers send lowercase
+    direction = direction.toLowerCase();
     if (direction === 'left') {
       this.selectedIndex = Math.max(0, this.selectedIndex - 1);
     } else if (direction === 'right') {

@@ -55,6 +55,8 @@
         border-radius: 4px;
         background: var(--color-dark-bg);
         display: block;
+        box-sizing: content-box;
+        image-rendering: pixelated;
     }
 
     .game-controls {
@@ -147,12 +149,102 @@
   <script>
     const canvas = document.getElementById('prototypeDisplay');
     const ctx = canvas.getContext('2d');
-    let consecutiveErrors = 0;
-    const MAX_ERRORS = 3;
-    const UPDATE_INTERVAL = 100;
-    const STATUS_INTERVAL = 500;
-    
-    // Audio setup
+    const statusEl = document.getElementById('gameStatus');
+
+    // ========== DOT RENDERING ==========
+    // The server sends 1 bit per dot; we draw the dots here from two
+    // pre-rendered sprites and only redraw dots that changed.
+    const DOT_SIZE = 8;
+    const DOT_SPACING = 2;
+    const CELL = DOT_SIZE + DOT_SPACING;
+    const DOT_COLORS = {
+      on: { fill: '#f0f0f0', stroke: '#c0c0c0' },
+      off: { fill: '#1a1a1a', stroke: '#0a0a0a' }
+    };
+    const BACKGROUND_COLOR = '#0a0a0a';
+    const FRAME_HEADER_BYTES = 4;
+
+    let gridWidth = 0;
+    let gridHeight = 0;
+    let dpr = 1;
+    let sprites = null;
+    let drawnBits = null;   // what is currently on the canvas
+    let pendingBits = null; // latest frame from the server, not yet drawn
+    let drawScheduled = false;
+
+    function makeSprite({ fill, stroke }) {
+      const sprite = document.createElement('canvas');
+      sprite.width = sprite.height = Math.round(CELL * dpr);
+      const sctx = sprite.getContext('2d');
+      sctx.scale(dpr, dpr);
+      sctx.fillStyle = BACKGROUND_COLOR;
+      sctx.fillRect(0, 0, CELL, CELL);
+      sctx.beginPath();
+      sctx.arc(DOT_SIZE / 2 + 0.5, DOT_SIZE / 2 + 0.5, DOT_SIZE / 2, 0, Math.PI * 2);
+      sctx.fillStyle = fill;
+      sctx.fill();
+      sctx.strokeStyle = stroke;
+      sctx.lineWidth = 1;
+      sctx.stroke();
+      return sprite;
+    }
+
+    function setupGrid(width, height) {
+      gridWidth = width;
+      gridHeight = height;
+      dpr = window.devicePixelRatio || 1;
+      const cssWidth = width * CELL - DOT_SPACING + 1;
+      const cssHeight = height * CELL - DOT_SPACING + 1;
+      canvas.style.width = cssWidth + 'px';
+      canvas.style.height = cssHeight + 'px';
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.imageSmoothingEnabled = false;
+      sprites = [makeSprite(DOT_COLORS.off), makeSprite(DOT_COLORS.on)];
+      drawnBits = null; // force full redraw
+    }
+
+    function drawFrame() {
+      drawScheduled = false;
+      const bits = pendingBits;
+      if (!bits || !sprites) return;
+
+      const full = !drawnBits || drawnBits.length !== bits.length;
+      const step = Math.round(CELL * dpr);
+      for (let i = 0; i < gridWidth * gridHeight; i++) {
+        const byte = i >> 3;
+        const mask = 1 << (i & 7);
+        const on = bits[byte] & mask;
+        if (!full && (drawnBits[byte] & mask) === on) continue;
+        const x = i % gridWidth;
+        const y = (i / gridWidth) | 0;
+        ctx.drawImage(sprites[on ? 1 : 0], x * step, y * step);
+      }
+      drawnBits = bits;
+    }
+
+    function handleFrame(buffer) {
+      const view = new DataView(buffer);
+      const width = view.getUint16(0, true);
+      const height = view.getUint16(2, true);
+      if (width !== gridWidth || height !== gridHeight) setupGrid(width, height);
+
+      pendingBits = new Uint8Array(buffer, FRAME_HEADER_BYTES);
+      if (!drawScheduled) {
+        drawScheduled = true;
+        requestAnimationFrame(drawFrame);
+      }
+    }
+
+    // Redraw crisply when moving between screens with different pixel density
+    matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`).addEventListener?.('change', () => {
+      if (gridWidth) {
+        setupGrid(gridWidth, gridHeight);
+        if (!drawScheduled) { drawScheduled = true; requestAnimationFrame(drawFrame); }
+      }
+    });
+
+    // ========== AUDIO ==========
     const audioElements = {
       'pacman_beginning.wav': document.getElementById('audio0'),
       'pacman_chomp.wav': document.getElementById('audio1'),
@@ -162,67 +254,78 @@
       'pacman_tutorial.mp3': document.getElementById('audio5'),
       'gameplay.mp3': document.getElementById('audio6')
     };
-    
-    let lastSoundTime = {};
-    
+
     function playSound(soundName) {
       const audio = audioElements[soundName];
       if (!audio) return;
-      
+
       // Don't restart background music if playing
-      if ((soundName.includes('gameplay') || soundName.includes('tutorial')) && 
-          !audio.paused && audio.currentTime > 0) {
-        return;
-        }
-      
+      if (audio.loop && !audio.paused && audio.currentTime > 0) return;
+
       audio.pause();
       audio.currentTime = 0;
       audio.play().catch(() => {});
     }
-    
+
     function stopSound(soundName) {
       const audio = audioElements[soundName];
       if (!audio) return;
       audio.pause();
       audio.currentTime = 0;
     }
-    
-    async function updateDisplay() {
-      try {
-        const response = await fetch('/frame-raw');
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        
-        const width = parseInt(response.headers.get('X-Canvas-Width'));
-        const height = parseInt(response.headers.get('X-Canvas-Height'));
-        
-        if (canvas.width !== width || canvas.height !== height) {
-          canvas.width = width;
-          canvas.height = height;
+
+    // ========== CONNECTION ==========
+    let socket = null;
+    let reconnectDelay = 250;
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      socket = new WebSocket(`${protocol}//${location.host}/ws`);
+      socket.binaryType = 'arraybuffer';
+
+      socket.onopen = () => {
+        reconnectDelay = 250;
+        drawnBits = null; // full redraw after (re)connect
+      };
+
+      socket.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          handleFrame(event.data);
+          return;
         }
-        
-        const buffer = await response.arrayBuffer();
-        const pixelData = new Uint8ClampedArray(buffer);
-        const imageData = new ImageData(pixelData, width, height);
-        ctx.putImageData(imageData, 0, 0);
-        
-        consecutiveErrors = 0;
-      } catch (error) {
-        consecutiveErrors++;
-        if (consecutiveErrors >= MAX_ERRORS) {
-          console.warn('Multiple errors updating display:', error.message);
+        const message = JSON.parse(event.data);
+        if (message.type === 'status') {
+          statusEl.textContent = message.status || 'Game Status: Running...';
+        } else if (message.type === 'background') {
+          if (message.background) {
+            document.body.style.backgroundImage = `url('/images/${message.background}')`;
+          }
+        } else if (message.type === 'sound') {
+          [].concat(message.stop || []).forEach(stopSound);
+          if (message.sound) playSound(message.sound);
         }
-      }
+      };
+
+      socket.onclose = () => {
+        statusEl.textContent = 'Game Status: Connection lost, reconnecting...';
+        setTimeout(connect, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 2, 4000);
+      };
     }
-    
+
     function sendCommand(command) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'command', command }));
+        return;
+      }
       fetch('/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command })
       }).catch(console.error);
     }
-    
-    // Keyboard controls
+
+    // ========== KEYBOARD ==========
     const keyMap = {
       'arrowup': 'UP', 'w': 'UP',
       'arrowdown': 'DOWN', 's': 'DOWN',
@@ -235,50 +338,20 @@
       '+': 'ADD_LIFE', '=': 'ADD_LIFE',
       '-': 'LOSE_LIFE', '_': 'LOSE_LIFE'
     };
-    
+    const REPEATABLE = new Set(['UP', 'DOWN', 'LEFT', 'RIGHT']);
+
     document.addEventListener('keydown', (e) => {
       const command = keyMap[e.key.toLowerCase()];
-      if (command) {
-        sendCommand(command);
-        e.preventDefault();
-      }
+      if (!command) return;
+      e.preventDefault();
+      // Holding Enter/R/Esc shouldn't fire the action over and over
+      if (e.repeat && !REPEATABLE.has(command)) return;
+      sendCommand(command);
     });
-    
-    // Background update function
-    function updateBackground() {
-      fetch('/background')
-        .then(r => r.json())
-        .then(d => {
-          if (d.background) {
-            document.body.style.backgroundImage = `url('/images/${d.background}')`;
-          }
-        })
-        .catch(() => {});
-    }
-    
-    // init
-    updateDisplay();
-    updateBackground();
-    setInterval(updateDisplay, UPDATE_INTERVAL);
-    setInterval(updateBackground, 1000); // Check for background changes every second
-    
-    setInterval(() => {
-      fetch('/status')
-        .then(r => r.text())
-        .then(s => document.getElementById('gameStatus').textContent = s || 'Game Status: Running...')
-        .catch(() => document.getElementById('gameStatus').textContent = 'Game Status: Connection Error');
-    }, STATUS_INTERVAL);
-    
-    setInterval(() => {
-      fetch('/sound-event')
-        .then(r => r.json())
-        .then(d => {
-          if (d.sound) playSound(d.sound);
-          if (d.stop) stopSound(d.stop);
-        })
-        .catch(() => {});
-    }, UPDATE_INTERVAL);
-    
+
+    // ========== INIT ==========
+    connect();
+
     document.addEventListener('DOMContentLoaded', () => {
       document.body.tabIndex = 0;
       document.body.focus();

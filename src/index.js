@@ -1,13 +1,12 @@
 // Flipdot Prototype - Unified browser + hardware system
 import { Ticker } from "./ticker.js";
 import { createCanvas, registerFont } from "canvas";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { FPS, LAYOUT } from "./settings.js";
 import { Display } from "@owowagency/flipdot-emu";
-import { FlipDotPrototypeRenderer } from "./prototype-renderer-refactored.js";
-import { updatePrototypeRenderer, setGameInstance, setBackgroundImage, setCommandCallback } from "./prototype-preview-refactored.js";
+import { FrameOutput } from "./frame-output.js";
+import { setGameInstance, setBackgroundImage, setCommandCallback } from "./prototype-preview-refactored.js";
 import { GameSelector } from "./game-selector.js";
 import { GameLoader } from "./game-loader.js";
 import { Xbox360Controller } from "./controller.js";
@@ -19,8 +18,6 @@ const __dirname = path.dirname(__filename);
 // ========== CONSTANTS ==========
 const IS_DEV = process.argv.includes("--dev");
 const USE_HARDWARE = true; //* always enabled
-const OUTPUT_DIR = "./output";
-const BRIGHTNESS_THRESHOLD = 127;
 const FONT_PATHS = {
   OpenSans: "../fonts/OpenSans-Variable.ttf",
   PPNeueMontreal: "../fonts/PPNeueMontrealMono-Regular.ttf",
@@ -31,7 +28,12 @@ const FONT_PATHS = {
 const { display, width, height } = initializeDisplay();
 const canvas = createCanvas(width, height);
 const ctx = setupCanvas(canvas);
-const prototypeRenderer = setupRenderer(width, height);
+const frameOutput = new FrameOutput({
+  width,
+  height,
+  display: USE_HARDWARE ? display : null,
+  debug: IS_DEV
+});
 
 // Game system state
 let currentMode = 'SELECTOR'; // 'SELECTOR' or 'GAME'
@@ -39,9 +41,9 @@ const gameLoader = new GameLoader();
 const games = GameLoader.loadGamesConfig();
 const gameSelector = new GameSelector(width, height, games);
 let currentGame = null;
+let isLoadingGame = false;
 
 setupFonts();
-ensureOutputDir();
 setupControllers();
 setupProcessHandlers();
 setBackgroundImage('background.jpg'); // Default black background
@@ -52,23 +54,12 @@ const ticker = new Ticker({ fps: FPS });
 ticker.start(() => {
   if (currentMode === 'SELECTOR') {
     gameSelector.update();
-    renderFrame(ctx, width, height);
   } else if (currentMode === 'GAME' && currentGame) {
     currentGame.update();
-    renderFrame(ctx, width, height);
   }
-  
-  const imageData = ctx.getImageData(0, 0, width, height);
-  
-  prototypeRenderer.renderFromImageData(imageData);
-  
-  if (USE_HARDWARE && display) {
-    sendToHardware(display, ctx, width, height);
-  }
-  
-  if (IS_DEV) {
-    saveDebugFrame(ctx, imageData, width, height);
-  }
+
+  renderFrame(ctx, width, height);
+  frameOutput.push(ctx);
 });
 
 // ========== HELPER FUNCTIONS ==========
@@ -91,23 +82,10 @@ function setupCanvas(canvas) {
   return ctx;
 }
 
-function setupRenderer(width, height) {
-  const renderer = new FlipDotPrototypeRenderer(width, height, 8, 2);
-  renderer.initialize();
-  updatePrototypeRenderer(renderer);
-  return renderer;
-}
-
 function setupFonts() {
   Object.entries(FONT_PATHS).forEach(([family, relativePath]) => {
     registerFont(path.resolve(__dirname, relativePath), { family });
   });
-}
-
-function ensureOutputDir() {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
 }
 
 function setupControllers() {
@@ -124,7 +102,9 @@ function setupControllers() {
       }
     });
     controller.on('direction', (dir) => handleDirection(dir));
-    controller.on('restart', () => handleRestart());
+    // A/START also emit 'restart'; they're handled through buttonPress so
+    // the game decides what they mean (start, launch, confirm...). Wiring
+    // both made a single press restart the game on top of its own action.
     controller.on('buttonPress', (btn) => handleButtonPress(btn));
   });
 }
@@ -143,36 +123,40 @@ function handleRestart() {
   }
 }
 
-async function handleButtonPress(button) {
+function handleButtonPress(button) {
   if (currentMode === 'SELECTOR') {
     // Enter key to select game
     if (button === 'A' || button === 'START') {
-      const selectedGame = gameSelector.getSelectedGame();
-      await loadGame(selectedGame);
+      loadGame(gameSelector.getSelectedGame());
     }
-  } else if (currentMode === 'GAME') {
-    // ESC, SELECT, or B button to go back to menu
-    if (button === 'BACK' || button === 'SELECT' || button === 'B') {
-      returnToSelector();
-    } else if (currentGame) {
-      currentGame.handleButtonPress(button);
-      
-      if (button !== 'A' && button !== 'START') return;
-      
-      const { scene } = currentGame.gameState;
-      
-      if (scene === 'TITLE' && currentGame.idleAnimation?.phase === 'waiting') {
-        currentGame.startGame();
-      } else if (scene === 'HOW_TO_PLAY') {
-        currentGame.startActualGame();
-      } else if (scene !== 'NAME_ENTRY') {
-        currentGame.restart();
-      }
-    }
+    return;
+  }
+
+  if (currentMode !== 'GAME' || !currentGame) return;
+
+  // ESC, SELECT, or B button to go back to menu
+  if (button === 'BACK' || button === 'SELECT' || button === 'B') {
+    returnToSelector();
+    return;
+  }
+
+  const sceneBefore = currentGame.gameState?.scene;
+  currentGame.handleButtonPress(button);
+
+  // Games that don't start from the title screen on A/START themselves
+  // (Pac-Xon) get started here. If the game already reacted (scene changed)
+  // leave it alone.
+  if ((button === 'A' || button === 'START') &&
+      sceneBefore === 'TITLE' &&
+      currentGame.gameState?.scene === 'TITLE' &&
+      currentGame.idleAnimation?.phase === 'waiting') {
+    currentGame.startGame?.();
   }
 }
 
 async function loadGame(gameConfig) {
+  if (isLoadingGame) return;
+  isLoadingGame = true;
   try {
     console.log(`Loading game: ${gameConfig.name}`);
     currentGame = await gameLoader.loadGame(gameConfig, width, height);
@@ -183,6 +167,8 @@ async function loadGame(gameConfig) {
   } catch (error) {
     console.error('Failed to load game:', error);
     currentMode = 'SELECTOR';
+  } finally {
+    isLoadingGame = false;
   }
 }
 
@@ -196,18 +182,13 @@ function returnToSelector() {
 }
 
 function handleWebCommand(command) {
-  // Handle web interface commands
-  if (currentMode === 'SELECTOR') {
-    if (command === 'LEFT') gameSelector.setDirection('left');
-    else if (command === 'RIGHT') gameSelector.setDirection('right');
-    else if (command === 'START' || command === 'A') {
-      const selectedGame = gameSelector.getSelectedGame();
-      loadGame(selectedGame);
-    }
-  } else if (currentMode === 'GAME') {
-    if (command === 'BACK' || command === 'SELECT') {
-      returnToSelector();
-    }
+  // Browser input goes through the same paths as the physical controllers
+  if (['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(command)) {
+    handleDirection(command);
+  } else if (command === 'RESTART') {
+    handleRestart();
+  } else {
+    handleButtonPress(command);
   }
 }
 
@@ -227,31 +208,4 @@ function renderFrame(ctx, width, height) {
   } else if (currentMode === 'GAME' && currentGame) {
     currentGame.render(ctx);
   }
-}
-
-function applyBinaryThreshold(imageData) {
-  const { data } = imageData;
-  for (let i = 0; i < data.length; i += 4) {
-    const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-    const binary = brightness > BRIGHTNESS_THRESHOLD ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = binary;
-    data[i + 3] = 255;
-  }
-}
-
-function sendToHardware(display, ctx, width, height) {
-  const imageData = ctx.getImageData(0, 0, width, height);
-  applyBinaryThreshold(imageData);
-  display.setImageData(imageData);
-  if (display.isDirty()) {
-    display.flush();
-  }
-}
-
-function saveDebugFrame(ctx, imageData, width, height) {
-  applyBinaryThreshold(imageData);
-  ctx.putImageData(imageData, 0, 0);
-  const filename = path.join(OUTPUT_DIR, "frame.png");
-  const buffer = canvas.toBuffer("image/png");
-  fs.writeFileSync(filename, buffer);
 }

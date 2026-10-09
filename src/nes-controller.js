@@ -1,6 +1,9 @@
 import { EventEmitter } from 'events';
 import fs from 'fs';
 
+const INPUT_EVENT_SIZE = 24; // sizeof(struct input_event) on 64-bit Linux
+const POLL_INTERVAL_MS = 4;
+
 export class NESController extends EventEmitter {
     constructor() {
         super();
@@ -9,7 +12,7 @@ export class NESController extends EventEmitter {
         this.lastAxisValues = {}; // Track last axis values for analog stick deadzone
         this.fd = null;
         this.devicePath = null;
-        this.readBuffer = Buffer.alloc(24); // Linux input event size
+        this.readBuffer = Buffer.alloc(INPUT_EVENT_SIZE * 64);
         
         // NES controller button codes (Linux input event codes)
         this.buttonMap = {
@@ -96,12 +99,16 @@ export class NESController extends EventEmitter {
             }
 
             try {
-                // Try to read, but don't block if no data available
-                const bytesRead = fs.readSync(this.fd, this.readBuffer, 0, 24, null);
-                
-                if (bytesRead === 24) {
-                    this.parseEvent(this.readBuffer);
-                }
+                // Drain everything that's queued. Reading a single event per
+                // poll let input pile up (a D-pad press is several events),
+                // which showed up as growing input lag.
+                let bytesRead;
+                do {
+                    bytesRead = fs.readSync(this.fd, this.readBuffer, 0, this.readBuffer.length, null);
+                    for (let offset = 0; offset + INPUT_EVENT_SIZE <= bytesRead; offset += INPUT_EVENT_SIZE) {
+                        this.parseEvent(this.readBuffer, offset);
+                    }
+                } while (bytesRead === this.readBuffer.length);
             } catch (error) {
                 // EAGAIN means no data available, which is fine in non-blocking mode
                 if (error.code !== 'EAGAIN' && error.code !== 'EWOULDBLOCK') {
@@ -109,10 +116,10 @@ export class NESController extends EventEmitter {
                     this.disconnect();
                 }
             }
-        }, 10); // Poll every 10ms
+        }, POLL_INTERVAL_MS);
     }
 
-    parseEvent(buffer) {
+    parseEvent(buffer, offset = 0) {
         // Linux input_event structure:
         // struct input_event {
         //     struct timeval time; // 16 bytes (8+8) on 64-bit
@@ -121,9 +128,9 @@ export class NESController extends EventEmitter {
         //     __s32 value;
         // };
         
-        const type = buffer.readUInt16LE(16);
-        const code = buffer.readUInt16LE(18);
-        const value = buffer.readInt32LE(20);
+        const type = buffer.readUInt16LE(offset + 16);
+        const code = buffer.readUInt16LE(offset + 18);
+        const value = buffer.readInt32LE(offset + 20);
 
         // EV_KEY = 1 (button press/release)
         if (type === 1) {

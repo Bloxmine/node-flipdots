@@ -452,8 +452,9 @@ export class PacxonGame {
       seen[ey][ex] = keep[ey][ex] = true;
     }
     
-    while (q.length) {
-      const [cx, cy] = q.shift();
+    // Index pointer instead of q.shift(), which is O(n) per pop
+    for (let head = 0; head < q.length; head++) {
+      const [cx, cy] = q[head];
       for (const [nx, ny] of this.neighbors4(cx, cy)) {
         if (!this.inBounds(nx, ny) || seen[ny][nx] || walls[ny][nx]) continue;
         seen[ny][nx] = keep[ny][nx] = true;

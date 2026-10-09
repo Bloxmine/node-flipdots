@@ -82,8 +82,9 @@ npm run test-input
 - `src/game-loader.js` - Dynamic game loading system
 - `src/pacxon-flipdot-refactored.js` - Pacxon game engine with optimized, clean code structure
 - `src/pong-game.js` - Example Pong game (placeholder)
-- `src/prototype-renderer-refactored.js` - Browser visualization with dot simulation
-- `src/prototype-preview-refactored.js` - Express server providing web preview and controls
+- `src/frame-output.js` - Thresholds each rendered frame once and sends it to the browser preview, hardware and debug PNG
+- `src/prototype-preview-refactored.js` - Express + WebSocket server providing web preview and controls
+- `src/prototype-preview.html` - Browser preview; draws the dots client-side from frames pushed over WebSocket
 - `src/prototype-refactored.js` - Browser-only prototype for development without hardware
 - `src/controller.js` - Xbox 360 controller input handling
 - `src/nes-controller.js` - NES controller input handling
@@ -226,16 +227,16 @@ The flipdot display runs a Pacxon-style game with the following features:
 - Scene management with data-driven transitions
 - Clean separation of update/render logic
 
-**Renderer** (`prototype-renderer-refactored.js`)
-- Dot-based visualization for browser preview
-- Differential rendering for performance
-- Color constants for visual clarity
+**Frame Output** (`frame-output.js`)
+- Reads and thresholds the canvas once per tick
+- Only pushes frames that changed
+- Never queues more than one frame on the serial line, so the physical display can't lag behind the game
+- Debug PNG (`--dev`) written at most once per second, off the main thread
 
 **Preview Server** (`prototype-preview-refactored.js`)
-- Express server with WebSocket support
-- Command dispatch for web controls
-- Real-time game state updates
-- Audio feedback system
+- Single WebSocket (`/ws`) pushes frames (1 bit per dot), status, background and sound events as they change
+- Browser sends controls over the same socket (`POST /command` still works for scripts)
+- Browser renders the dots itself and only redraws dots that changed
 
 ## Dependencies
 
